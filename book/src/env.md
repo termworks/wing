@@ -1,7 +1,7 @@
-# Environment (`dp env`)
+# Environment (`wing env`)
 
-`dp env` is a direnv-compatible environment loader. The `.envrc` file is
-executable bash and the source of truth. devpilot watches the current directory
+`wing env` is a direnv-compatible environment loader. The `.envrc` file is
+executable bash and the source of truth. wing watches the current directory
 (and parents) for a `.envrc`, runs it in a bash subshell, captures the resulting
 exported variables, and applies only the diff to your shell.
 
@@ -11,12 +11,12 @@ Add one line to your shell rc file:
 
 ```sh
 # bash (~/.bashrc) or zsh (~/.zshrc)
-eval "$(dp env hook bash)"     # or: zsh
+eval "$(wing env hook bash)"     # or: zsh
 # fish (~/.config/fish/config.fish)
-dp env hook fish | source
+wing env hook fish | source
 ```
 
-Before each prompt the hook calls `dp env export <shell>`, which loads or
+Before each prompt the hook calls `wing env export <shell>`, which loads or
 unloads variables depending on the current directory.
 
 ## Authorization
@@ -26,11 +26,11 @@ unloads variables depending on the current directory.
 ```sh
 cd ~/code/myapp
 echo 'export DATABASE_URL=postgres://localhost/myapp' > .envrc
-dp env allow          # authorizes the .envrc in the current directory
+wing env allow          # authorizes the .envrc in the current directory
 ```
 
 Editing the `.envrc` invalidates the authorization (the file hash changes); run
-`dp env allow` again. Revoke with `dp env deny`.
+`wing env allow` again. Revoke with `wing env deny`.
 
 ## The `.envrc` file
 
@@ -49,19 +49,19 @@ dotenv_if_exists .env.local
 ## Commands
 
 ```sh
-dp env export bash|zsh|fish|json   # emit the env diff (hook-driven)
-dp env hook bash|zsh|fish          # print the shell hook
-dp env allow [PATH]                # authorize the .envrc at PATH (default: cwd)
-dp env deny [PATH]                 # revoke authorization
-dp env status                      # cwd resolution, allow state, loaded vars
+wing env export bash|zsh|fish|json   # emit the env diff (hook-driven)
+wing env hook bash|zsh|fish          # print the shell hook
+wing env allow [PATH]                # authorize the .envrc at PATH (default: cwd)
+wing env deny [PATH]                 # revoke authorization
+wing env status                      # cwd resolution, allow state, loaded vars
 ```
 
 ## How it works
 
-State travels per-shell-session via the `DP_DIFF` environment variable, which
+State travels per-shell-session via the `WING_DIFF` environment variable, which
 holds a *reversible* diff (original values + applied values). On each prompt:
 
-1. devpilot reverts the previously-applied overlay, restoring a pristine
+1. wing reverts the previously-applied overlay, restoring a pristine
    baseline.
 2. it re-runs `.envrc` against that pristine baseline (so values like `PATH`
    never accumulate across cycles);

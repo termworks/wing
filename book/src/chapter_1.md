@@ -1,6 +1,6 @@
 # Introduction
 
-`devpilot` is a language-neutral development workflow CLI. It tracks projects,
+`wing` is a language-neutral development workflow CLI. It tracks projects,
 machines, reusable templates, and the local metadata needed to move
 between them quickly.
 
@@ -10,10 +10,10 @@ path.
 
 Core commands:
 
-- `dp project ...`
-- `dp machine ...`
-- `dp template ...`
-- `dp data ...`
-- `dp tui`
+- `wing project ...`
+- `wing machine ...`
+- `wing template ...`
+- `wing data ...`
+- `wing tui`
 
-Running `dp` with no arguments opens the TUI.
+Running `wing` with no arguments opens the TUI.

@@ -6,7 +6,7 @@ Build locally with the repo Makefile:
 make build
 ```
 
-The binary is written to `./dp`.
+The binary is written to `./wing`.
 
 Run the local verification gate:
 

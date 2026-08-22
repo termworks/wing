@@ -1,10 +1,10 @@
-## devpilot_sync.nim — rsync-backed project sync.
+## rsync.nim — rsync-backed project sync.
 ##
 ## Sync runs `rsync` over an SSH transport. The SSH options (key, port,
 ## ControlMaster socket, proxy jump, agent forwarding) are assembled by the
-## caller in devpilot.nim and passed in as `sshCmd`, which becomes rsync's
+## caller in cmd/sync.nim and passed in as `sshCmd`, which becomes rsync's
 ## `--rsh` value. This module owns rsync command construction and execution and
-## stays free of devpilot's domain types.
+## stays free of wing's domain types.
 ##
 ## Trailing-slash semantics: the caller forms `src` and `dst` so that source
 ## contents mirror into the destination (the conventional project-sync behavior).

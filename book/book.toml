@@ -2,7 +2,7 @@
 authors = ["Trim Bresilla"]
 language = "en"
 multilingual = false
-title = "devpilot"
+title = "wing"
 
 [output.html]
 default-theme = "navy"

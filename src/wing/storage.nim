@@ -38,9 +38,9 @@ proc defaultStorageContent(fileName: string): string =
 proc dataRoot*(): string =
   let xdgData = getEnv("XDG_DATA_HOME")
   if xdgData.len > 0:
-    result = xdgData / "devpilot"
+    result = xdgData / "wing"
   else:
-    result = getHomeDir() / ".local" / "share" / "devpilot"
+    result = getHomeDir() / ".local" / "share" / "wing"
   createDir(result)
 
 proc configPath*(fileName: string): string =
@@ -118,7 +118,7 @@ proc createBackup*(destination = ""): string =
   let stamp = storageStamp()
   result =
     if destination.len > 0: destination
-    else: root / "backups" / ("devpilot-backup-" & safeStamp(stamp))
+    else: root / "backups" / ("wing-backup-" & safeStamp(stamp))
 
   if fileExists(result):
     raise newException(IOError, "Backup path is a file: " & result)

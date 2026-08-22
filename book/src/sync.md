@@ -1,7 +1,7 @@
-# Sync (`dp sync`)
+# Sync (`wing sync`)
 
-`dp sync` synchronizes a registered project with a directory on a remote
-machine using **rsync over SSH**. devpilot builds the rsync command from the
+`wing sync` synchronizes a registered project with a directory on a remote
+machine using **rsync over SSH**. wing builds the rsync command from the
 project (local path) and the machine (SSH target) you already have registered,
 and reuses the machine's **ControlMaster socket** so `connect`, `check --ssh`,
 and `sync` share one SSH connection.
@@ -16,19 +16,19 @@ A **sync target** ties together three things from your registry:
 - a **remote path** on that machine.
 
 ```sh
-dp sync add app-lab \
+wing sync add app-lab \
   --project app \
   --machine lab \
   --remote /srv/app \
   --direction push \
   --exclude .git --exclude node_modules
 
-dp sync run app-lab              # push
-dp sync run app-lab --dry-run    # print the exact rsync command
-dp sync run app-lab --direction pull   # remote -> local
+wing sync run app-lab              # push
+wing sync run app-lab --dry-run    # print the exact rsync command
+wing sync run app-lab --direction pull   # remote -> local
 ```
 
-## What devpilot runs
+## What wing runs
 
 Something equivalent to:
 
@@ -47,13 +47,13 @@ rsync --archive --verbose --human-readable --compress \
 ## Commands
 
 ```sh
-dp sync add NAME --project P --machine M --remote PATH [options]
-dp sync list [--raw]
-dp sync info NAME [--json]
-dp sync run NAME [--dry-run] [--delete] [--direction push|pull]
-dp sync set NAME [--remote PATH] [--direction push|pull] [--delete|--no-delete] [--exclude ...]
-dp sync rename OLD NEW
-dp sync remove NAME
+wing sync add NAME --project P --machine M --remote PATH [options]
+wing sync list [--raw]
+wing sync info NAME [--json]
+wing sync run NAME [--dry-run] [--delete] [--direction push|pull]
+wing sync set NAME [--remote PATH] [--direction push|pull] [--delete|--no-delete] [--exclude ...]
+wing sync rename OLD NEW
+wing sync remove NAME
 ```
 
 One endpoint is always the local machine. Sync targets resolve the project and

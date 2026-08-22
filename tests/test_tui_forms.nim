@@ -1,6 +1,7 @@
 import std/[os, strutils]
 
-import ../src/devpilot_tui
+import ../src/wing/tui/forms
+import ../src/wing/tui/render
 
 let missingProject = projectFormCommand("", "/tmp/demo", "default", "Nim", "", "")
 doAssert not missingProject.ok
@@ -23,11 +24,11 @@ doAssert machine.command.contains("--username tester")
 doAssert machine.command.contains("--key /tmp/key")
 
 let missingTemplatePath = templateFormCommand("base", "desc",
-    "/tmp/devpilot-tui-missing-template", "Nim", "")
+    "/tmp/wing-tui-missing-template", "Nim", "")
 doAssert not missingTemplatePath.ok
 doAssert missingTemplatePath.error.contains("does not exist")
 
-let templatePath = "/tmp/devpilot-tui-form-template"
+let templatePath = "/tmp/wing-tui-form-template"
 removeDir(templatePath)
 createDir(templatePath)
 let templateCommand = templateFormCommand("base", "desc", templatePath, "Nim",

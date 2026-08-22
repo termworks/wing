@@ -1,25 +1,25 @@
-# devpilot env stdlib
+# wing env stdlib
 #
 # Trimmed adaptation of direnv's stdlib.sh, providing the helpers available
 # inside a .envrc evaluation context. direnv is licensed under the MIT license
 # (Copyright (C) @zimbatm and contributors). See https://github.com/direnv/direnv
 #
-# This file is sourced by devpilot inside a bash subshell BEFORE the user's
+# This file is sourced by wing inside a bash subshell BEFORE the user's
 # .envrc. Functions defined here are usable from .envrc.
 #
-# devpilot passes these variables to the subshell:
-#   DP_BIN         absolute path to the devpilot binary
-#   DP_ENVRC       absolute path to the .envrc being evaluated
-#   DP_WATCH_FILE  path to a file that watch_file/watch_dir append to
+# wing passes these variables to the subshell:
+#   WING_BIN         absolute path to the wing binary
+#   WING_ENVRC       absolute path to the .envrc being evaluated
+#   WING_WATCH_FILE  path to a file that watch_file/watch_dir append to
 #
-# Compatibility shim: $direnv points at the devpilot binary so .envrc files
+# Compatibility shim: $direnv points at the wing binary so .envrc files
 # originally written for direnv that reference "$direnv" keep working for the
-# operations devpilot implements.
+# operations wing implements.
 
 shopt -s gnu_errfmt nullglob extglob
 
-direnv="$DP_BIN"
-direnv_config_dir="${DIRENV_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/devpilot}"
+direnv="$WING_BIN"
+direnv_config_dir="${DIRENV_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/wing}"
 export DIRENV_IN_ENVRC=1
 
 __env_strictness() {
@@ -49,8 +49,8 @@ unstrict_env() {
 
 direnv_layout_dir() { echo "${direnv_layout_dir:-$PWD/.direnv}"; }
 
-log_status() { echo "dp env: $*" >&2; }
-log_error() { echo "dp env: ERROR $*" >&2; }
+log_status() { echo "wing env: $*" >&2; }
+log_error() { echo "wing env: ERROR $*" >&2; }
 
 has() { type "$1" &>/dev/null; }
 
@@ -163,7 +163,7 @@ load_prefix() {
   path_add PKG_CONFIG_PATH "$REPLY/lib/pkgconfig"
 }
 
-__dp_dotenv() {
+__wing_dotenv() {
   local load=$1 path=${2:-}
   if [[ -z $path ]]; then path=$PWD/.env
   elif [[ -d $path ]]; then path=$path/.env; fi
@@ -178,18 +178,18 @@ __dp_dotenv() {
   set +a
 }
 
-dotenv() { __dp_dotenv true "${1:-}"; }
-dotenv_if_exists() { __dp_dotenv false "${1:-}"; }
+dotenv() { __wing_dotenv true "${1:-}"; }
+dotenv_if_exists() { __wing_dotenv false "${1:-}"; }
 
 watch_file() {
-  if [[ -n $DP_WATCH_FILE ]]; then
+  if [[ -n $WING_WATCH_FILE ]]; then
     local f
-    for f in "$@"; do echo "$f" >>"$DP_WATCH_FILE"; done
+    for f in "$@"; do echo "$f" >>"$WING_WATCH_FILE"; done
   fi
 }
 
 watch_dir() {
-  if [[ -n $DP_WATCH_FILE ]]; then echo "dir:$1" >>"$DP_WATCH_FILE"; fi
+  if [[ -n $WING_WATCH_FILE ]]; then echo "dir:$1" >>"$WING_WATCH_FILE"; fi
 }
 
 source_env() {
@@ -231,11 +231,11 @@ source_up() { _source_up "${1:-}" false; }
 source_up_if_exists() { _source_up "${1:-}" true; }
 
 direnv_version() {
-  if [[ -z ${1:-} ]]; then echo "2.37.1-devpilot"; return; fi
-  # Best-effort version check; devpilot reports a direnv-compatible version.
+  if [[ -z ${1:-} ]]; then echo "2.37.1-wing"; return; fi
+  # Best-effort version check; wing reports a direnv-compatible version.
   return 0
 }
 
-layout() { log_status "layout '$1' is not supported by devpilot env (yet)"; }
-use() { log_status "use '$1' is not supported by devpilot env (yet)"; }
-direnv_load() { log_error "direnv_load is not supported by devpilot env"; return 1; }
+layout() { log_status "layout '$1' is not supported by wing env (yet)"; }
+use() { log_status "use '$1' is not supported by wing env (yet)"; }
+direnv_load() { log_error "direnv_load is not supported by wing env"; return 1; }

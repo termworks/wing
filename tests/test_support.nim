@@ -1,6 +1,6 @@
 import std/[os, osproc]
 
-const Binary* = "/tmp/devpilot-nim-test-dp"
+const Binary* = "/tmp/wing-nim-test-wing"
 
 proc run*(command: string): tuple[output: string, code: int] =
   let output = execCmdEx(command)
@@ -25,18 +25,18 @@ proc bobabrewPathFlag(): string =
 
 proc compileBinary*() =
   discard checked("nim c" & bobabrewPathFlag() & " --out:" &
-      quoteShell(Binary) & " src/dp.nim")
+      quoteShell(Binary) & " src/wing.nim")
 
 proc freshEnv*(name: string): string =
-  let dataHome = "/tmp/devpilot-" & name & "-data"
-  let home = "/tmp/devpilot-" & name & "-home"
+  let dataHome = "/tmp/wing-" & name & "-data"
+  let home = "/tmp/wing-" & name & "-home"
   removeDir(dataHome)
   removeDir(home)
   createDir(dataHome)
   createDir(home)
   "XDG_DATA_HOME=" & quoteShell(dataHome) & " HOME=" & quoteShell(home) & " "
 
-proc dp*(envPrefix: string): string =
+proc wing*(envPrefix: string): string =
   envPrefix & quoteShell(Binary) & " "
 
 proc resetDir*(path: string) =

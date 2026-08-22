@@ -1,23 +1,23 @@
-# devpilot bundled templates
+# wing bundled templates
 
-Install these into your devpilot template registry:
+Install these into your wing template registry:
 
 ```sh
-dp init
+wing init
 ```
 
 Then create projects:
 
 ```sh
-dp template apply go /tmp/my-go-tool --name my_go_tool
-dp template apply zig /tmp/my-zig-tool --name my_zig_tool
-dp template apply nim /tmp/my-nim-tool --name my_nim_tool
-dp template apply rust /tmp/my-rust-lib --name my_rust_lib
-dp template apply cpp /tmp/my-cpp-lib --name my_cpp_lib
-dp template apply python /tmp/my-python-tool --name my_python_tool
-dp template apply python /tmp/my-uv-tool --name my_uv_tool --flavour uv
-dp template apply python /tmp/my-pixi-tool --name my_pixi_tool --flavour pixi
-dp template apply python /tmp/my-mamba-tool --name my_mamba_tool --flavour micromamba
+wing template apply go /tmp/my-go-tool --name my_go_tool
+wing template apply zig /tmp/my-zig-tool --name my_zig_tool
+wing template apply nim /tmp/my-nim-tool --name my_nim_tool
+wing template apply rust /tmp/my-rust-lib --name my_rust_lib
+wing template apply cpp /tmp/my-cpp-lib --name my_cpp_lib
+wing template apply python /tmp/my-python-tool --name my_python_tool
+wing template apply python /tmp/my-uv-tool --name my_uv_tool --flavour uv
+wing template apply python /tmp/my-pixi-tool --name my_pixi_tool --flavour pixi
+wing template apply python /tmp/my-mamba-tool --name my_mamba_tool --flavour micromamba
 ```
 
 For a missing target, `--name` may be omitted and the target directory name is

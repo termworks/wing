@@ -6,7 +6,7 @@ description   = "Development workflow and project management CLI"
 license       = "MIT"
 srcDir        = "src"
 binDir        = "bin"
-bin           = @["dp"]
+bin           = @["wing"]
 
 requires "nim >= 2.2.0"
 requires "https://github.com/bresilla/bobabrew"

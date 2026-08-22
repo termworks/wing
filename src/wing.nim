@@ -1,13 +1,13 @@
 import std/os
 
-import devpilot
-import devpilot_tui
+import wing/app
+import wing/tui/app as tui
 
 when isMainModule:
   var args = commandLineParams()
   if args.len == 0 or args[0] in ["tui", "ui", "dashboard"]:
     if args.len > 0:
       args.delete(0)
-    runTui(args)
+    tui.runTui(args)
   else:
-    devpilot.main()
+    app.main()

@@ -1,51 +1,51 @@
 import std/[os, strutils, tables]
 
-import ../src/devpilot_sync
+import ../src/wing/rsync
 import test_support
 
 compileBinary()
 
 let envPrefix = freshEnv("sync")
-let dp = dp(envPrefix)
+let wing = wing(envPrefix)
 
 # --- prerequisites: a registered project and machine -----------------------
-let projPath = "/tmp/devpilot-sync-proj"
+let projPath = "/tmp/wing-sync-proj"
 resetDir(projPath)
-discard checked(dp & "project add app --path " & quoteShell(projPath) &
+discard checked(wing & "project add app --path " & quoteShell(projPath) &
     " --language go")
-discard checked(dp & "machine add lab 127.0.0.1:22:local --username tester")
+discard checked(wing & "machine add lab 127.0.0.1:22:local --username tester")
 
 # --- CRUD -------------------------------------------------------------------
-discard checked(dp &
+discard checked(wing &
     "sync add app-lab --project app --machine lab --remote /srv/app --direction push --exclude .git")
-let raw = checked(dp & "sync list --raw")
+let raw = checked(wing & "sync list --raw")
 doAssert "app-lab\tapp\tlab\t/srv/app\tpush" in raw, raw
 
-let info = checked(dp & "sync info app-lab")
+let info = checked(wing & "sync info app-lab")
 doAssert info.contains("Sync: app-lab")
 doAssert info.contains("Direction: push")
 doAssert info.contains("Exclude: .git")
 
-let infoJson = checked(dp & "sync info app-lab --json")
+let infoJson = checked(wing & "sync info app-lab --json")
 doAssert infoJson.contains("\"remote_path\": \"/srv/app\"")
 
 # set + rename
-discard checked(dp & "sync set app-lab --direction pull --no-delete")
-doAssert checked(dp & "sync info app-lab").contains("Direction: pull")
-discard checked(dp & "sync rename app-lab app-prod")
-doAssert checked(dp & "sync info app-prod").contains("Sync: app-prod")
+discard checked(wing & "sync set app-lab --direction pull --no-delete")
+doAssert checked(wing & "sync info app-lab").contains("Direction: pull")
+discard checked(wing & "sync rename app-lab app-prod")
+doAssert checked(wing & "sync info app-prod").contains("Sync: app-prod")
 
 # validation: add without --remote fails
-let badAdd = run(dp & "sync add bogus --project app --machine lab")
+let badAdd = run(wing & "sync add bogus --project app --machine lab")
 doAssert badAdd.code != 0
 doAssert badAdd.output.contains("--remote")
 # validation: unknown project fails
-let badProj = run(dp & "sync add bogus2 --project nope --machine lab --remote /x")
+let badProj = run(wing & "sync add bogus2 --project nope --machine lab --remote /x")
 doAssert badProj.code != 0
 doAssert badProj.output.contains("not registered")
 
-discard checked(dp & "sync remove app-prod")
-doAssert run(dp & "sync info app-prod").code != 0
+discard checked(wing & "sync remove app-prod")
+doAssert run(wing & "sync info app-prod").code != 0
 
 # --- rsync command builder --------------------------------------------------
 # push: src = local (contents), dst = remote; archive + compress + rsh.
@@ -85,9 +85,9 @@ doAssert rendered.startsWith("rsync "), "formatCmd should start with rsync: " &
 doAssert "/code/app/" in rendered
 
 # --- run --dry-run builds the rsync command and prints it -------------------
-discard checked(dp & "sync add dr --project app --machine lab --remote /srv/app")
-let dryRunOut = checked(dp & "sync run dr --dry-run")
+discard checked(wing & "sync add dr --project app --machine lab --remote /srv/app")
+let dryRunOut = checked(wing & "sync run dr --dry-run")
 doAssert dryRunOut.contains("rsync"), "dry-run should show the rsync command"
 doAssert dryRunOut.contains("--archive"), "dry-run cmd needs --archive"
 doAssert dryRunOut.contains("tester@"), "dry-run cmd needs the ssh target"
-discard checked(dp & "sync remove dr")
+discard checked(wing & "sync remove dr")

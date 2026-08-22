@@ -1,7 +1,7 @@
 SHELL := /bin/bash
 
-PROJECT_NAME := dp
-NIMBLE_FILE := devpilot.nimble
+PROJECT_NAME := wing
+NIMBLE_FILE := wing.nimble
 PROJECT_VERSION := $(shell sed -n 's/^[[:space:]]*version[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' $(NIMBLE_FILE) | head -1)
 ifeq ($(PROJECT_VERSION),)
     $(error Error: could not determine project version from $(NIMBLE_FILE))
@@ -31,7 +31,7 @@ $(info ------------------------------------------)
 .PHONY: build b compile c run r install uninstall test t test-all cover check vet fmt fmt-check tidy clean changelog verify release mdbook help h
 
 build:
-	@$(NIM) c $(NIM_FLAGS) $(BUILD_FLAGS) --out:$(PROJECT_NAME) src/dp.nim
+	@$(NIM) c $(NIM_FLAGS) $(BUILD_FLAGS) --out:$(PROJECT_NAME) src/wing.nim
 
 b: build
 
@@ -62,15 +62,15 @@ t: test
 
 test-all:
 	@$(NIMBLE) test -y
-	@$(NIM) c $(NIM_FLAGS) -d:release --out:/tmp/devpilot-release-check src/dp.nim
-	@rm -f /tmp/devpilot-release-check
+	@$(NIM) c $(NIM_FLAGS) -d:release --out:/tmp/wing-release-check src/wing.nim
+	@rm -f /tmp/wing-release-check
 
 cover:
 	@echo "coverage is not configured for this Nim project yet; running tests instead"
 	@$(MAKE) test
 
 check:
-	@$(NIM) check $(NIM_FLAGS) src/dp.nim
+	@$(NIM) check $(NIM_FLAGS) src/wing.nim
 
 vet: check
 
@@ -81,7 +81,7 @@ fmt-check:
 	@set -e; \
 	needed=""; \
 	for f in $(NIM_FILES); do \
-		tmp="/tmp/devpilot-nimpretty-$$(basename "$$f").$$$$.nim"; \
+		tmp="/tmp/wing-nimpretty-$$(basename "$$f").$$$$.nim"; \
 		cp "$$f" "$$tmp"; \
 		$(NIMPRETTY) "$$tmp" >/dev/null; \
 		if ! cmp -s "$$f" "$$tmp"; then needed="$$needed $$f"; fi; \

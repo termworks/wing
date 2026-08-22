@@ -1,7 +1,7 @@
 # Data and backup
 
-Data is stored under `$XDG_DATA_HOME/devpilot` or
-`~/.local/share/devpilot`.
+Data is stored under `$XDG_DATA_HOME/wing` or
+`~/.local/share/wing`.
 
 Files:
 
@@ -12,8 +12,8 @@ Files:
 Backup and restore:
 
 ```sh
-dp data backup create --path ./devpilot-backup
-dp data backup restore ./devpilot-backup --force
-dp data export --format json
-dp data import ./devpilot-backup --merge
+wing data backup create --path ./wing-backup
+wing data backup restore ./wing-backup --force
+wing data export --format json
+wing data import ./wing-backup --merge
 ```

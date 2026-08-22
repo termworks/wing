@@ -6,7 +6,7 @@
 
 ### <!-- 0 -->⛰️  Features
 
-- Consolidate data management under `dp data`
+- Consolidate data management under `wing data`
 - To NIIIIIM
 - To NIIIIIM
 - Add project, template, workspace, and machine commands
@@ -113,7 +113,7 @@
 
 ### <!-- 3 -->📚 Documentation
 
-- Update devpilot description in README file
+- Update wing description in README file
 - Update README.md file and fix license badge
 
 ### Build
