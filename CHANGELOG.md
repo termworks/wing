@@ -1,12 +1,29 @@
 # Changelog
 
+## [0.5.1] - 2026-08-22
+
+### <!-- 0 -->⛰️  Features
+
+- Better structure
+- Transition TUI to Bobabrew
+- Embed templates and expose `dp init` command
+- Add built-in starter templates
+
+### <!-- 2 -->🚜 Refactor
+
+- Rename project to wing and restructure src
+
+### <!-- 7 -->⚙️ Miscellaneous Tasks
+
+- Cleanup
+
 ## [0.2.1] - 2026-06-21
 
 ## [0.2.0] - 2026-06-21
 
 ### <!-- 0 -->⛰️  Features
 
-- Consolidate data management under `dp data`
+- Consolidate data management under `wing data`
 - To NIIIIIM
 - To NIIIIIM
 - Add project, template, workspace, and machine commands
@@ -113,7 +130,7 @@
 
 ### <!-- 3 -->📚 Documentation
 
-- Update devpilot description in README file
+- Update wing description in README file
 - Update README.md file and fix license badge
 
 ### Build

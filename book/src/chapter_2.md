@@ -1,12 +1,12 @@
 # Installation
 
-Build locally with the repo Makefile:
+Build locally with the repo recipes (`.make.lua`, via [oslo](https://github.com/termworks/oslo)):
 
 ```sh
 make build
 ```
 
-The binary is written to `./dp`.
+The binary is written to `./wing`.
 
 Run the local verification gate:
 

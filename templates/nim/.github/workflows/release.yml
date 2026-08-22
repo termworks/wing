@@ -1,0 +1,50 @@
+name: release
+
+on:
+  release:
+    types: [created]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: release ${{ matrix.artifact }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact: "{{kebab_name}}-linux-amd64"
+          - os: ubuntu-24.04-arm
+            artifact: "{{kebab_name}}-linux-arm64"
+          - os: macos-15-intel
+            artifact: "{{kebab_name}}-macos-amd64"
+          - os: macos-14
+            artifact: "{{kebab_name}}-macos-arm64"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jiro4989/setup-nim-action@v2
+        with:
+          nim-version: "2.2.4"
+      - name: Cache Nim
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.nimble
+            ~/.cache/nim
+          key: ${{ runner.os }}-${{ runner.arch }}-nim-${{ hashFiles('*.nimble') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ runner.arch }}-nim-
+      - name: Install dependencies
+        run: make tidy
+      - name: Build release binary
+        run: make build
+      - name: Package
+        run: tar -czf "${{ matrix.artifact }}.tar.gz" "{{kebab_name}}"
+      - name: Upload artifact
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ matrix.artifact }}.tar.gz

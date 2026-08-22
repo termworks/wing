@@ -1,0 +1,22 @@
+name: tests
+
+on:
+  push:
+    branches: [ "develop", "main" ]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install native tooling
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends build-essential cmake clang-format
+      - name: Verify
+        run: make verify
+

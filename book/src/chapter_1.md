@@ -1,7 +1,7 @@
 # Introduction
 
-`devpilot` is a language-neutral development workflow CLI. It tracks projects,
-workspaces, machines, reusable templates, and the local metadata needed to move
+`wing` is a language-neutral development workflow CLI. It tracks projects,
+machines, reusable templates, and the local metadata needed to move
 between them quickly.
 
 The tool is implemented in Nim, but the product is not Nim-specific: projects
@@ -10,11 +10,10 @@ path.
 
 Core commands:
 
-- `dp project ...`
-- `dp workspace ...`
-- `dp machine ...`
-- `dp template ...`
-- `dp data ...`
-- `dp tui`
+- `wing project ...`
+- `wing machine ...`
+- `wing template ...`
+- `wing data ...`
+- `wing tui`
 
-Running `dp` with no arguments opens the TUI.
+Running `wing` with no arguments opens the TUI.

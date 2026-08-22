@@ -23,13 +23,13 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            artifact: dp-linux-amd64
+            artifact: wing-linux-amd64
           - os: ubuntu-24.04-arm
-            artifact: dp-linux-arm64
+            artifact: wing-linux-arm64
           - os: macos-15-intel
-            artifact: dp-macos-amd64
+            artifact: wing-macos-amd64
           - os: macos-14
-            artifact: dp-macos-arm64
+            artifact: wing-macos-arm64
     steps:
       - uses: actions/checkout@v4
         with:
@@ -43,15 +43,15 @@ jobs:
           path: |
             ~/.nimble
             ~/.cache/nim
-          key: ${{ runner.os }}-${{ runner.arch }}-nim-${{ hashFiles('devpilot.nimble') }}
+          key: ${{ runner.os }}-${{ runner.arch }}-nim-${{ hashFiles('wing.nimble') }}
           restore-keys: |
             ${{ runner.os }}-${{ runner.arch }}-nim-
       - name: Install dependencies
-        run: make tidy
+        run: nimble install -y --depsOnly
       - name: Build release binary
-        run: make build
+        run: nim c -d:release --out:wing src/wing.nim
       - name: Package
-        run: tar -czf "${{ matrix.artifact }}.tar.gz" dp
+        run: tar -czf "${{ matrix.artifact }}.tar.gz" wing
       - name: Upload artifact
         uses: softprops/action-gh-release@v2
         with:

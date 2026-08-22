@@ -3,7 +3,7 @@
 Generate completion scripts:
 
 ```sh
-dp completions bash
-dp completions zsh
-dp completions fish
+wing completions bash
+wing completions zsh
+wing completions fish
 ```

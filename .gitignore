@@ -1,7 +1,7 @@
 /target
 /.direnv
 /.devbox
-/dp
+/wing
 /bin
 /nimcache
 /coverage.out

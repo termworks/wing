@@ -1,24 +1,20 @@
 import std/[os, strutils]
 
-import ../src/devpilot_tui
+import ../src/wing/tui/forms
+import ../src/wing/tui/render
 
 let missingProject = projectFormCommand("", "/tmp/demo", "default", "Nim", "", "")
 doAssert not missingProject.ok
 doAssert missingProject.error.contains("project name")
 
-let project = projectFormCommand("demo", "/tmp/demo", "", "Nim", "illwill",
+let project = projectFormCommand("demo", "/tmp/demo", "", "Nim", "bobabrew",
     "cli,tui")
 doAssert project.ok
 doAssert project.command.contains("project --namespace default add demo")
 doAssert project.command.contains("--language Nim")
-doAssert project.command.contains("--framework illwill")
+doAssert project.command.contains("--framework bobabrew")
 doAssert project.command.contains("--tags cli")
 doAssert project.command.contains("--tags tui")
-
-let workspace = workspaceFormCommand("lab", "/tmp/lab", "test workspace")
-doAssert workspace.ok
-doAssert workspace.command.contains("workspace add lab")
-doAssert workspace.command.contains("--description 'test workspace'")
 
 let machine = machineFormCommand("lab", "tester", "/tmp/key",
     "127.0.0.1:22:local")
@@ -28,11 +24,11 @@ doAssert machine.command.contains("--username tester")
 doAssert machine.command.contains("--key /tmp/key")
 
 let missingTemplatePath = templateFormCommand("base", "desc",
-    "/tmp/devpilot-tui-missing-template", "Nim", "")
+    "/tmp/wing-tui-missing-template", "Nim", "")
 doAssert not missingTemplatePath.ok
 doAssert missingTemplatePath.error.contains("does not exist")
 
-let templatePath = "/tmp/devpilot-tui-form-template"
+let templatePath = "/tmp/wing-tui-form-template"
 removeDir(templatePath)
 createDir(templatePath)
 let templateCommand = templateFormCommand("base", "desc", templatePath, "Nim",
