@@ -153,18 +153,55 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="machines"><a class="header" href="#machines">Machines</a></h1>
-<p>Machines store SSH targets and host interfaces.</p>
+<p>Machines store SSH targets and host interfaces, and drive a tight SSH
+integration: <code>connect</code>, <code>check --ssh</code>, and <code>sync</code> all reuse one <strong>ControlMaster
+socket</strong> per machine+interface, so the first connection stays open for ~60s and
+every later operation piggybacks on it (no repeated handshakes).</p>
 <pre><code class="language-sh">dp machine add lab 127.0.0.1:22:local --username "$USER"
+dp machine add bastion 10.0.0.5:22:local --username ops \
+  --proxy-jump gate.example.com --forward-agent
 dp machine ssh-config lab
 dp machine connect lab --dry-run
-dp machine check lab --timeout 1000
+dp machine check lab --ssh --timeout 2000
 </code></pre>
+<h2 id="per-machine-ssh-options"><a class="header" href="#per-machine-ssh-options">Per-machine SSH options</a></h2>
+<ul>
+<li><code>-J, --proxy-jump PROXY</code> — SSH <code>ProxyJump</code> host (bastion/jump host).</li>
+<li><code>-A, --forward-agent</code> — enable SSH agent forwarding.</li>
+<li><code>-k, --key KEY</code> — identity file.</li>
+</ul>
+<p>These are stored on the machine and applied by <code>connect</code>, <code>check --ssh</code>, the
+generated <code>ssh-config</code>, and by <code>sync</code> (via rsync's <code>--rsh</code>).</p>
+<h2 id="commands"><a class="header" href="#commands">Commands</a></h2>
+<pre><code class="language-sh">dp machine add NAME IP[:PORT][:IFACE]... [-u USER] [-k KEY] [-J PROXY] [-A]
+dp machine set NAME [-u USER] [-k KEY] [-J PROXY] [-A|--no-forward-agent]
+dp machine list [--raw] [--json]
+dp machine info NAME
+dp machine ssh-config [NAME]          # IdentitiesOnly, StrictHostKeyChecking
+                                       # accept-new, ControlMaster, ProxyJump…
+dp machine check NAME [--ssh] [--timeout MS]   # TCP by default; --ssh = auth test
+dp machine check --all [--ssh]
+dp machine connect NAME [--interface IFACE] [--command CMD] [--dry-run]
+dp machine host add/remove NAME IP[:PORT][:IFACE]
+dp machine rename OLD NEW
+dp machine pick
+dp machine remove NAME
+</code></pre>
+<p>The interface name (the third <code>IP:PORT:IFACE</code> field) must be <code>local</code> or a real
+network interface on this machine — it labels the route, not the remote side.</p>
+<h2 id="check-vs-check---ssh"><a class="header" href="#check-vs-check---ssh"><code>check</code> vs <code>check --ssh</code></a></h2>
+<ul>
+<li>default (TCP): tests that the host:port is reachable.</li>
+<li><code>--ssh</code>: runs <code>ssh … -o BatchMode=yes … true</code> and reports whether SSH
+<strong>authentication</strong> actually succeeds — the right test when "the port is open
+but my key is rejected" is the failure you care about.</li>
+</ul>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="workspaces.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="projects.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
@@ -178,7 +215,7 @@ dp machine check lab --timeout 1000
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="workspaces.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="projects.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 

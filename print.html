@@ -155,7 +155,7 @@
                     <main>
                         <h1 id="introduction"><a class="header" href="#introduction">Introduction</a></h1>
 <p><code>devpilot</code> is a language-neutral development workflow CLI. It tracks projects,
-workspaces, machines, reusable templates, and the local metadata needed to move
+machines, reusable templates, and the local metadata needed to move
 between them quickly.</p>
 <p>The tool is implemented in Nim, but the product is not Nim-specific: projects
 can be Go, Rust, Nim, Python, Node, Zig, or anything else with a filesystem
@@ -163,7 +163,6 @@ path.</p>
 <p>Core commands:</p>
 <ul>
 <li><code>dp project ...</code></li>
-<li><code>dp workspace ...</code></li>
 <li><code>dp machine ...</code></li>
 <li><code>dp template ...</code></li>
 <li><code>dp data ...</code></li>
@@ -193,22 +192,50 @@ dp project set api --framework cobra
 dp project discover ~/code --depth 2
 dp project import ~/code --dry-run
 </code></pre>
-<div style="break-before: page; page-break-before: always;"></div><h1 id="workspaces"><a class="header" href="#workspaces">Workspaces</a></h1>
-<p>Workspaces group projects and components so actions can run across many paths.</p>
-<pre><code class="language-sh">dp workspace add lab --path ~/code --projects api
-dp workspace status lab
-dp workspace run lab -- git status --short
-dp workspace open lab --dry-run
-dp workspace env lab --format direnv
-dp workspace discover lab ~/code
-</code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="machines"><a class="header" href="#machines">Machines</a></h1>
-<p>Machines store SSH targets and host interfaces.</p>
+<p>Machines store SSH targets and host interfaces, and drive a tight SSH
+integration: <code>connect</code>, <code>check --ssh</code>, and <code>sync</code> all reuse one <strong>ControlMaster
+socket</strong> per machine+interface, so the first connection stays open for ~60s and
+every later operation piggybacks on it (no repeated handshakes).</p>
 <pre><code class="language-sh">dp machine add lab 127.0.0.1:22:local --username "$USER"
+dp machine add bastion 10.0.0.5:22:local --username ops \
+  --proxy-jump gate.example.com --forward-agent
 dp machine ssh-config lab
 dp machine connect lab --dry-run
-dp machine check lab --timeout 1000
+dp machine check lab --ssh --timeout 2000
 </code></pre>
+<h2 id="per-machine-ssh-options"><a class="header" href="#per-machine-ssh-options">Per-machine SSH options</a></h2>
+<ul>
+<li><code>-J, --proxy-jump PROXY</code> — SSH <code>ProxyJump</code> host (bastion/jump host).</li>
+<li><code>-A, --forward-agent</code> — enable SSH agent forwarding.</li>
+<li><code>-k, --key KEY</code> — identity file.</li>
+</ul>
+<p>These are stored on the machine and applied by <code>connect</code>, <code>check --ssh</code>, the
+generated <code>ssh-config</code>, and by <code>sync</code> (via rsync's <code>--rsh</code>).</p>
+<h2 id="commands"><a class="header" href="#commands">Commands</a></h2>
+<pre><code class="language-sh">dp machine add NAME IP[:PORT][:IFACE]... [-u USER] [-k KEY] [-J PROXY] [-A]
+dp machine set NAME [-u USER] [-k KEY] [-J PROXY] [-A|--no-forward-agent]
+dp machine list [--raw] [--json]
+dp machine info NAME
+dp machine ssh-config [NAME]          # IdentitiesOnly, StrictHostKeyChecking
+                                       # accept-new, ControlMaster, ProxyJump…
+dp machine check NAME [--ssh] [--timeout MS]   # TCP by default; --ssh = auth test
+dp machine check --all [--ssh]
+dp machine connect NAME [--interface IFACE] [--command CMD] [--dry-run]
+dp machine host add/remove NAME IP[:PORT][:IFACE]
+dp machine rename OLD NEW
+dp machine pick
+dp machine remove NAME
+</code></pre>
+<p>The interface name (the third <code>IP:PORT:IFACE</code> field) must be <code>local</code> or a real
+network interface on this machine — it labels the route, not the remote side.</p>
+<h2 id="check-vs-check---ssh"><a class="header" href="#check-vs-check---ssh"><code>check</code> vs <code>check --ssh</code></a></h2>
+<ul>
+<li>default (TCP): tests that the host:port is reachable.</li>
+<li><code>--ssh</code>: runs <code>ssh … -o BatchMode=yes … true</code> and reports whether SSH
+<strong>authentication</strong> actually succeeds — the right test when "the port is open
+but my key is rejected" is the failure you care about.</li>
+</ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="templates"><a class="header" href="#templates">Templates</a></h1>
 <p>Templates are copied safely with conflict detection, optional dry-runs, and
 explicit symlink handling.</p>
@@ -216,7 +243,18 @@ explicit symlink handling.</p>
 dp template apply base /tmp/new-app --name new_app --dry-run
 dp template apply base /tmp/new-app --name new_app --skip-existing
 </code></pre>
-<p>Bundled starter templates are available for Go, Zig, Nim, Rust, and C++:</p>
+<p><code>--name</code> is optional only when the target path does not exist. In that case,
+devpilot creates the directory and uses its final path component as the project
+name:</p>
+<pre><code class="language-sh">dp template apply base /tmp/new-app
+# creates /tmp/new-app and uses new-app as the project name
+</code></pre>
+<p>If the target exists, its path is treated only as the destination and an
+explicit name is required. This means <code>.</code> always requires <code>--name</code>:</p>
+<pre><code class="language-sh">dp template apply base . --name new_app
+</code></pre>
+<p>Bundled starter templates are available for Go, Zig, Nim, Rust, C++, and
+Python:</p>
 <pre><code class="language-sh">dp init
 dp template builtins list
 dp template apply go /tmp/my-go-tool --name my_go_tool
@@ -224,15 +262,130 @@ dp template apply zig /tmp/my-zig-tool --name my_zig_tool
 dp template apply nim /tmp/my-nim-tool --name my_nim_tool
 dp template apply rust /tmp/my-rust-lib --name my_rust_lib
 dp template apply cpp /tmp/my-cpp-lib --name my_cpp_lib
+dp template apply python /tmp/my-python-tool --name my_python_tool
 </code></pre>
+<p>Python defaults to the <code>nix</code> flavour: Python, the build backend, pytest, and
+Ruff are composed with <code>python.withPackages</code> in <code>flake.nix</code>, and no virtual
+environment is created. Optional environment-manager flavours keep the manager
+itself available through Nix:</p>
+<pre><code class="language-sh">dp template apply python /tmp/my-uv-tool --name my_uv_tool --flavour uv
+dp template apply python /tmp/my-pixi-tool --name my_pixi_tool --flavour pixi
+dp template apply python /tmp/my-mamba-tool --name my_mamba_tool --flavour micromamba
+</code></pre>
+<p><code>--flavor</code> is accepted as an alias for <code>--flavour</code>. The generated Makefile
+provides <code>make setup</code>; the <code>uv</code>, <code>pixi</code>, and <code>micromamba</code> flavours create their
+respective local environments only when that target or another dependent target
+is run.</p>
 <p>Template placeholders are replaced in both file contents and file names, so
 <code>{{snake_name}}.nimble</code> becomes <code>my_nim_tool.nimble</code>.</p>
 <p>The bundled templates are embedded in the <code>dp</code> binary. <code>dp init</code> writes them to
 <code>$XDG_DATA_HOME/devpilot/templates</code> and registers <code>go</code>, <code>zig</code>, <code>nim</code>, <code>rust</code>,
-and <code>cpp</code>.</p>
+<code>cpp</code>, and <code>python</code>.</p>
 <p>The embedded templates share one common base for files like <code>.envrc</code>,
 <code>flake.nix</code>, <code>README.md</code>, <code>.gitignore</code>, and <code>PROJECT</code>; each language directory
-only overlays its unique source, build, test, and workflow files.</p>
+only overlays its unique source, build, test, and workflow files. Python adds a
+shared Python base plus one selected environment flavour overlay.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="environment-dp-env"><a class="header" href="#environment-dp-env">Environment (<code>dp env</code>)</a></h1>
+<p><code>dp env</code> is a direnv-compatible environment loader. The <code>.envrc</code> file is
+executable bash and the source of truth. devpilot watches the current directory
+(and parents) for a <code>.envrc</code>, runs it in a bash subshell, captures the resulting
+exported variables, and applies only the diff to your shell.</p>
+<h2 id="shell-hook"><a class="header" href="#shell-hook">Shell hook</a></h2>
+<p>Add one line to your shell rc file:</p>
+<pre><code class="language-sh"># bash (~/.bashrc) or zsh (~/.zshrc)
+eval "$(dp env hook bash)"     # or: zsh
+# fish (~/.config/fish/config.fish)
+dp env hook fish | source
+</code></pre>
+<p>Before each prompt the hook calls <code>dp env export &lt;shell&gt;</code>, which loads or
+unloads variables depending on the current directory.</p>
+<h2 id="authorization"><a class="header" href="#authorization">Authorization</a></h2>
+<p><code>.envrc</code> is executable bash, so it must be explicitly authorized before it runs:</p>
+<pre><code class="language-sh">cd ~/code/myapp
+echo 'export DATABASE_URL=postgres://localhost/myapp' &gt; .envrc
+dp env allow          # authorizes the .envrc in the current directory
+</code></pre>
+<p>Editing the <code>.envrc</code> invalidates the authorization (the file hash changes); run
+<code>dp env allow</code> again. Revoke with <code>dp env deny</code>.</p>
+<h2 id="the-envrc-file"><a class="header" href="#the-envrc-file">The <code>.envrc</code> file</a></h2>
+<p>A trimmed copy of direnv's stdlib is sourced before your <code>.envrc</code>, so these
+helpers are available: <code>PATH_add</code>, <code>path_add</code>, <code>dotenv</code>, <code>source_env</code>,
+<code>source_env_up</code>, <code>watch_file</code>, <code>strict_env</code>, <code>expand_path</code>, <code>find_up</code>, among
+others.</p>
+<pre><code class="language-sh">export DATABASE_URL=postgres://localhost/myapp
+export LOG_LEVEL=debug
+PATH_add bin
+dotenv_if_exists .env.local
+</code></pre>
+<h2 id="commands-1"><a class="header" href="#commands-1">Commands</a></h2>
+<pre><code class="language-sh">dp env export bash|zsh|fish|json   # emit the env diff (hook-driven)
+dp env hook bash|zsh|fish          # print the shell hook
+dp env allow [PATH]                # authorize the .envrc at PATH (default: cwd)
+dp env deny [PATH]                 # revoke authorization
+dp env status                      # cwd resolution, allow state, loaded vars
+</code></pre>
+<h2 id="how-it-works"><a class="header" href="#how-it-works">How it works</a></h2>
+<p>State travels per-shell-session via the <code>DP_DIFF</code> environment variable, which
+holds a <em>reversible</em> diff (original values + applied values). On each prompt:</p>
+<ol>
+<li>devpilot reverts the previously-applied overlay, restoring a pristine
+baseline.</li>
+<li>it re-runs <code>.envrc</code> against that pristine baseline (so values like <code>PATH</code>
+never accumulate across cycles);</li>
+<li>it diffs the current shell state against the freshly-loaded environment and
+emits only the <code>export</code>/<code>unset</code> changes for the shell to <code>eval</code>.</li>
+</ol>
+<p>This mirrors direnv's <code>DIRENV_DIFF</code> model.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="sync-dp-sync"><a class="header" href="#sync-dp-sync">Sync (<code>dp sync</code>)</a></h1>
+<p><code>dp sync</code> synchronizes a registered project with a directory on a remote
+machine using <strong>rsync over SSH</strong>. devpilot builds the rsync command from the
+project (local path) and the machine (SSH target) you already have registered,
+and reuses the machine's <strong>ControlMaster socket</strong> so <code>connect</code>, <code>check --ssh</code>,
+and <code>sync</code> share one SSH connection.</p>
+<h2 id="model"><a class="header" href="#model">Model</a></h2>
+<p>A <strong>sync target</strong> ties together three things from your registry:</p>
+<ul>
+<li>a <strong>project</strong> (provides the local path),</li>
+<li>a <strong>machine</strong> (provides the SSH target: user, host, port, key, ProxyJump,
+agent forwarding),</li>
+<li>a <strong>remote path</strong> on that machine.</li>
+</ul>
+<pre><code class="language-sh">dp sync add app-lab \
+  --project app \
+  --machine lab \
+  --remote /srv/app \
+  --direction push \
+  --exclude .git --exclude node_modules
+
+dp sync run app-lab              # push
+dp sync run app-lab --dry-run    # print the exact rsync command
+dp sync run app-lab --direction pull   # remote -&gt; local
+</code></pre>
+<h2 id="what-devpilot-runs"><a class="header" href="#what-devpilot-runs">What devpilot runs</a></h2>
+<p>Something equivalent to:</p>
+<pre><code class="language-sh">rsync --archive --verbose --human-readable --compress \
+      [--delete] [--exclude=PAT ...] \
+      --rsh 'ssh -o ControlMaster=auto -o ControlPath=…/&lt;machine&gt;-&lt;iface&gt; …' \
+      LOCAL/  USER@HOST:REMOTE/
+</code></pre>
+<ul>
+<li>Source trailing slash mirrors <strong>contents</strong> into the destination.</li>
+<li><code>--delete</code> (mirror mode) is opt-in (<code>--delete</code> at <code>add</code> or <code>run</code> time).</li>
+<li><code>--compress</code> is on by default.</li>
+<li><code>--dry-run</code> adds rsync <code>-n</code> and prints the full command without transferring.</li>
+</ul>
+<h2 id="commands-2"><a class="header" href="#commands-2">Commands</a></h2>
+<pre><code class="language-sh">dp sync add NAME --project P --machine M --remote PATH [options]
+dp sync list [--raw]
+dp sync info NAME [--json]
+dp sync run NAME [--dry-run] [--delete] [--direction push|pull]
+dp sync set NAME [--remote PATH] [--direction push|pull] [--delete|--no-delete] [--exclude ...]
+dp sync rename OLD NEW
+dp sync remove NAME
+</code></pre>
+<p>One endpoint is always the local machine. Sync targets resolve the project and
+machine from the existing registries, so adding <code>--proxy-jump</code>/<code>--forward-agent</code>
+to the machine automatically applies to its sync targets too.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="tui"><a class="header" href="#tui">TUI</a></h1>
 <p>The TUI provides a terminal dashboard over the same command/storage logic used
 by the CLI.</p>
@@ -248,7 +401,6 @@ and overlays support scrolling for long output.</p>
 <p>Files:</p>
 <ul>
 <li><code>projects.toml</code></li>
-<li><code>workspaces.toml</code></li>
 <li><code>machines.toml</code></li>
 <li><code>templates.toml</code></li>
 </ul>
