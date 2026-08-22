@@ -19,7 +19,7 @@ proc showHelp*() =
   echo helpLine("sync", "s", "Sync a project to a remote machine over SSH", "1;32")
   echo ""
   echo paint("Other commands:", "1;36")
-  echo helpLine("init", "", "Initialize wing data and embedded templates",
+  echo helpLine("init", "", "Initialize wing data and register templates",
       "1;34")
   echo helpLine("data", "", "Backup, restore, export, and import wing data",
       "1;34")
@@ -50,7 +50,7 @@ proc commandReferenceMarkdown*(): string =
 
 ## Other commands
 
-- `wing init` — initialize local wing data and write embedded templates.
+- `wing init` — initialize local wing data and register available templates.
 - `wing data ...` — backup, restore, export, and import wing data.
 - `wing completions SHELL` — generate bash, zsh, or fish completions.
 - `wing tui` — open the terminal dashboard. Running `wing` with no arguments also opens it.

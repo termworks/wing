@@ -3,7 +3,7 @@
 import std/[os, sequtils, strutils]
 
 import ../apply
-import ../builtins/data
+import ../builtins/registry
 import ../builtins/flavours
 import ../builtins/install
 import ../builtins/paths
@@ -130,9 +130,9 @@ proc handleTemplate*(argsIn: seq[string]) =
         echo "Framework: " & noneIfEmpty(tmpl.framework)
         echo "Tags: " & (if tmpl.tags.len == 0: "None" else: tmpl.tags.join(", "))
         let builtinIndex = templateBuiltinIndex(tmpl)
-        if builtinIndex >= 0 and builtinTemplateFlavours(BuiltinTemplates[
+        if builtinIndex >= 0 and builtinTemplateFlavours(builtinSpecs()[
             builtinIndex]).len > 0:
-          echo "Flavours: " & builtinFlavourSummary(BuiltinTemplates[
+          echo "Flavours: " & builtinFlavourSummary(builtinSpecs()[
               builtinIndex])
         echo "Created: " & displayStamp(tmpl.createdAt)
         echo "Updated: " & displayStamp(tmpl.updatedAt)

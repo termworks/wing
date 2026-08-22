@@ -1,8 +1,11 @@
-## `wing init` — seeds the data directory and bundled templates.
+## `wing init` — seeds the data directory and registers whatever templates it can find.
+
+import std/os
 
 import ../builtins/install
+import ../builtins/paths
+import ../builtins/registry
 import ../cliargs
-import ../embedded
 import ../storage
 import ../store/machines
 import ../store/projects
@@ -19,11 +22,17 @@ proc handleInit*(argsIn: seq[string]) =
   discard ensureProjectsFile()
   discard ensureMachinesFile()
   let templatesPath = ensureTemplatesFile()
-  let seeded = ensureEmbeddedTemplateSources(force)
+  echo "Initialized wing data: " & dataRoot()
+
+  # Templates are not carried inside the binary any more, so init reports where it looked rather
+  # than writing a copy out. Nothing else here depends on them being present.
+  let root = builtinTemplatesRoot()
+  if root.len == 0:
+    echo "No templates found. Put a template tree at " & dataRoot() /
+        "templates" &
+        ", or point WING_TEMPLATE_DIR at one."
+    return
 
   var templates = parseTemplates(templatesPath)
-  installBuiltinTemplates(templatesPath, templates, force, seeded.root)
-
-  echo "Initialized wing data: " & dataRoot()
-  echo "Embedded template sources: " & seeded.root & " (" & $seeded.written &
-      " written, " & $seeded.skipped & " skipped)"
+  installBuiltinTemplates(templatesPath, templates, force, root)
+  echo "Templates: " & root & " (" & $builtinSpecs().len & " declared)"

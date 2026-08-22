@@ -2,7 +2,7 @@
 
 import std/os
 
-import ../embedded
+import ../storage
 import ../types
 import ./flavours
 
@@ -12,9 +12,8 @@ proc builtinTemplatesRoot*(): string =
     return fromEnv
 
   let appDir = parentDir(getAppFilename())
-  let embeddedRoot = embeddedTemplatesRoot()
   let candidates = @[
-    embeddedRoot,
+    dataRoot() / "templates",
     getCurrentDir() / "templates",
     appDir / "templates",
     appDir / ".." / "share" / "wing" / "templates"
@@ -24,24 +23,24 @@ proc builtinTemplatesRoot*(): string =
       return candidate
   ""
 
-proc builtinTemplatePath*(root: string; tmpl: BuiltinTemplate): string =
+proc builtinTemplatePath*(root: string; tmpl: TemplateSpec): string =
   root / tmpl.dir
 
-proc builtinTemplateBasePath*(root: string; tmpl: BuiltinTemplate): string =
+proc builtinTemplateBasePath*(root: string; tmpl: TemplateSpec): string =
   let templatePath = builtinTemplatePath(root, tmpl)
   if builtinTemplateFlavours(tmpl).len > 0:
     templatePath / "base"
   else:
     templatePath
 
-proc builtinTemplateFlavourPath*(root: string; tmpl: BuiltinTemplate;
+proc builtinTemplateFlavourPath*(root: string; tmpl: TemplateSpec;
     flavour: string): string =
   builtinTemplatePath(root, tmpl) / "flavours" / flavour
 
 proc builtinCommonPath*(root: string): string =
   root / "common"
 
-proc builtinTemplateAvailable*(root: string; tmpl: BuiltinTemplate): bool =
+proc builtinTemplateAvailable*(root: string; tmpl: TemplateSpec): bool =
   if root.len == 0 or not dirExists(builtinCommonPath(root)) or not dirExists(
       builtinTemplateBasePath(root, tmpl)):
     return false

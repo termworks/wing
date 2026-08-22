@@ -224,24 +224,18 @@ createDir(initDataHome)
 createDir(initHome)
 let initPrefix = "XDG_DATA_HOME=" & quoteShell(initDataHome) & " HOME=" &
     quoteShell(initHome) & " "
+# Templates are not carried inside the binary any more, so init registers whatever tree it can
+# reach rather than writing one out. Here that is the repository's own templates/, via the cwd.
 let initOutput = checked(initPrefix & quoteShell(Binary) & " init")
 doAssert initOutput.contains("Initialized wing data")
-doAssert fileExists(initDataHome / "wing" / "templates" / "common" /
-    "flake.nix")
-doAssert fileExists(initDataHome / "wing" / "templates" / "nim" /
-    "{{snake_name}}.nimble")
-doAssert fileExists(initDataHome / "wing" / "templates" / "rust" /
-    "Cargo.toml")
-doAssert fileExists(initDataHome / "wing" / "templates" / "cpp" /
-    "CMakeLists.txt")
-doAssert fileExists(initDataHome / "wing" / "templates" / "python" /
-    "base" / "pyproject.toml")
-doAssert fileExists(initDataHome / "wing" / "templates" / "python" /
-    "flavours" / "uv" / "Makefile")
-doAssert fileExists(initDataHome / "wing" / "templates" / "python" /
-    "flavours" / "pixi" / "pixi.toml")
-doAssert fileExists(initDataHome / "wing" / "templates" / "python" /
-    "flavours" / "micromamba" / "environment.yml")
+doAssert initOutput.contains("6 declared"), initOutput
+
+# A reachable tree that declares nothing is reported, not treated as a failure.
+let emptyRoot = "/tmp/wing-init-empty-templates"
+resetDir(emptyRoot)
+let bareInit = checked("WING_TEMPLATE_DIR=" & quoteShell(emptyRoot) & " " &
+    initPrefix & quoteShell(Binary) & " init")
+doAssert bareInit.contains("0 declared"), bareInit
 let initializedTemplates = checked(initPrefix & quoteShell(Binary) &
     " template list --raw")
 doAssert initializedTemplates.contains("go\tgo\t")

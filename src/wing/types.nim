@@ -36,15 +36,24 @@ type
     createdAt*: string
     updatedAt*: string
 
-  BuiltinTemplate* = object
+  # A flavour is a named variant of one template: its own Nix packages and its own note about the
+  # environment it sets up. Before this was data, "does this template have variants" was answered
+  # by comparing the template's name to "python" inside the compiler.
+  TemplateFlavour* = object
+    name*: string
+    nixPackages*: string
+    environment*: string
+
+  # What a template.lua declares about itself. Replaces the compiled-in BuiltinTemplate record.
+  TemplateSpec* = object
     name*: string
     description*: string
     dir*: string
     language*: string
     framework*: string
-    tags*: string
+    tags*: seq[string]
     nixPackages*: string
-    flavours*: string
+    flavours*: seq[TemplateFlavour]
     defaultFlavour*: string
 
   SyncTarget* = object
