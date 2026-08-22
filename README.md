@@ -9,7 +9,8 @@ wing
 
 - Manage named projects with namespace, path, language, framework, template, and tag metadata.
 - Discover/import projects from existing source trees.
-- Manage reusable file/directory templates and apply them to new target directories with dry-run, conflict, symlink, and bundled-template flavour controls.
+- Manage reusable file/directory templates and apply them to new target directories with dry-run, conflict, symlink, and flavour controls.
+- Templates declare themselves in Lua (`template.lua`) and live on disk, not inside the binary; a `~/.config/wing/init.lua` can add, override, and extend them. See [Configuration](book/src/config.md).
 - Manage SSH machine entries with ProxyJump/agent-forwarding, shared ControlMaster sockets, SSH config generation, TCP/SSH health checks, and connection through stored host/interface metadata.
 - Load project-scoped environment variables from `.envrc` files with a direnv-compatible loader and shell hooks (`wing env`).
 - Sync a registered project to a remote machine over SSH with rsync (`wing sync`).
