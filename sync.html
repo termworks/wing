@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Sync - devpilot</title>
+        <title>Sync - wing</title>
 
 
         <!-- Custom HTML head -->
@@ -120,7 +120,7 @@
                         </button>
                     </div>
 
-                    <h1 class="menu-title">devpilot</h1>
+                    <h1 class="menu-title">wing</h1>
 
                     <div class="right-buttons">
                         <a href="print.html" title="Print this book" aria-label="Print this book">
@@ -152,9 +152,9 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="sync-dp-sync"><a class="header" href="#sync-dp-sync">Sync (<code>dp sync</code>)</a></h1>
-<p><code>dp sync</code> synchronizes a registered project with a directory on a remote
-machine using <strong>rsync over SSH</strong>. devpilot builds the rsync command from the
+                        <h1 id="sync-wing-sync"><a class="header" href="#sync-wing-sync">Sync (<code>wing sync</code>)</a></h1>
+<p><code>wing sync</code> synchronizes a registered project with a directory on a remote
+machine using <strong>rsync over SSH</strong>. wing builds the rsync command from the
 project (local path) and the machine (SSH target) you already have registered,
 and reuses the machine's <strong>ControlMaster socket</strong> so <code>connect</code>, <code>check --ssh</code>,
 and <code>sync</code> share one SSH connection.</p>
@@ -166,18 +166,18 @@ and <code>sync</code> share one SSH connection.</p>
 agent forwarding),</li>
 <li>a <strong>remote path</strong> on that machine.</li>
 </ul>
-<pre><code class="language-sh">dp sync add app-lab \
+<pre><code class="language-sh">wing sync add app-lab \
   --project app \
   --machine lab \
   --remote /srv/app \
   --direction push \
   --exclude .git --exclude node_modules
 
-dp sync run app-lab              # push
-dp sync run app-lab --dry-run    # print the exact rsync command
-dp sync run app-lab --direction pull   # remote -&gt; local
+wing sync run app-lab              # push
+wing sync run app-lab --dry-run    # print the exact rsync command
+wing sync run app-lab --direction pull   # remote -&gt; local
 </code></pre>
-<h2 id="what-devpilot-runs"><a class="header" href="#what-devpilot-runs">What devpilot runs</a></h2>
+<h2 id="what-wing-runs"><a class="header" href="#what-wing-runs">What wing runs</a></h2>
 <p>Something equivalent to:</p>
 <pre><code class="language-sh">rsync --archive --verbose --human-readable --compress \
       [--delete] [--exclude=PAT ...] \
@@ -191,13 +191,13 @@ dp sync run app-lab --direction pull   # remote -&gt; local
 <li><code>--dry-run</code> adds rsync <code>-n</code> and prints the full command without transferring.</li>
 </ul>
 <h2 id="commands"><a class="header" href="#commands">Commands</a></h2>
-<pre><code class="language-sh">dp sync add NAME --project P --machine M --remote PATH [options]
-dp sync list [--raw]
-dp sync info NAME [--json]
-dp sync run NAME [--dry-run] [--delete] [--direction push|pull]
-dp sync set NAME [--remote PATH] [--direction push|pull] [--delete|--no-delete] [--exclude ...]
-dp sync rename OLD NEW
-dp sync remove NAME
+<pre><code class="language-sh">wing sync add NAME --project P --machine M --remote PATH [options]
+wing sync list [--raw]
+wing sync info NAME [--json]
+wing sync run NAME [--dry-run] [--delete] [--direction push|pull]
+wing sync set NAME [--remote PATH] [--direction push|pull] [--delete|--no-delete] [--exclude ...]
+wing sync rename OLD NEW
+wing sync remove NAME
 </code></pre>
 <p>One endpoint is always the local machine. Sync targets resolve the project and
 machine from the existing registries, so adding <code>--proxy-jump</code>/<code>--forward-agent</code>

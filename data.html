@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Data and backup - devpilot</title>
+        <title>Data and backup - wing</title>
 
 
         <!-- Custom HTML head -->
@@ -120,7 +120,7 @@
                         </button>
                     </div>
 
-                    <h1 class="menu-title">devpilot</h1>
+                    <h1 class="menu-title">wing</h1>
 
                     <div class="right-buttons">
                         <a href="print.html" title="Print this book" aria-label="Print this book">
@@ -153,8 +153,8 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="data-and-backup"><a class="header" href="#data-and-backup">Data and backup</a></h1>
-<p>Data is stored under <code>$XDG_DATA_HOME/devpilot</code> or
-<code>~/.local/share/devpilot</code>.</p>
+<p>Data is stored under <code>$XDG_DATA_HOME/wing</code> or
+<code>~/.local/share/wing</code>.</p>
 <p>Files:</p>
 <ul>
 <li><code>projects.toml</code></li>
@@ -162,10 +162,10 @@
 <li><code>templates.toml</code></li>
 </ul>
 <p>Backup and restore:</p>
-<pre><code class="language-sh">dp data backup create --path ./devpilot-backup
-dp data backup restore ./devpilot-backup --force
-dp data export --format json
-dp data import ./devpilot-backup --merge
+<pre><code class="language-sh">wing data backup create --path ./wing-backup
+wing data backup restore ./wing-backup --force
+wing data export --format json
+wing data import ./wing-backup --merge
 </code></pre>
 
                     </main>

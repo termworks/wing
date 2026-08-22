@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Templates - devpilot</title>
+        <title>Templates - wing</title>
 
 
         <!-- Custom HTML head -->
@@ -120,7 +120,7 @@
                         </button>
                     </div>
 
-                    <h1 class="menu-title">devpilot</h1>
+                    <h1 class="menu-title">wing</h1>
 
                     <div class="right-buttons">
                         <a href="print.html" title="Print this book" aria-label="Print this book">
@@ -155,38 +155,38 @@
                         <h1 id="templates"><a class="header" href="#templates">Templates</a></h1>
 <p>Templates are copied safely with conflict detection, optional dry-runs, and
 explicit symlink handling.</p>
-<pre><code class="language-sh">dp template add base --description "Base app" --path ./template
-dp template apply base /tmp/new-app --name new_app --dry-run
-dp template apply base /tmp/new-app --name new_app --skip-existing
+<pre><code class="language-sh">wing template add base --description "Base app" --path ./template
+wing template apply base /tmp/new-app --name new_app --dry-run
+wing template apply base /tmp/new-app --name new_app --skip-existing
 </code></pre>
 <p><code>--name</code> is optional only when the target path does not exist. In that case,
-devpilot creates the directory and uses its final path component as the project
+wing creates the directory and uses its final path component as the project
 name:</p>
-<pre><code class="language-sh">dp template apply base /tmp/new-app
+<pre><code class="language-sh">wing template apply base /tmp/new-app
 # creates /tmp/new-app and uses new-app as the project name
 </code></pre>
 <p>If the target exists, its path is treated only as the destination and an
 explicit name is required. This means <code>.</code> always requires <code>--name</code>:</p>
-<pre><code class="language-sh">dp template apply base . --name new_app
+<pre><code class="language-sh">wing template apply base . --name new_app
 </code></pre>
 <p>Bundled starter templates are available for Go, Zig, Nim, Rust, C++, and
 Python:</p>
-<pre><code class="language-sh">dp init
-dp template builtins list
-dp template apply go /tmp/my-go-tool --name my_go_tool
-dp template apply zig /tmp/my-zig-tool --name my_zig_tool
-dp template apply nim /tmp/my-nim-tool --name my_nim_tool
-dp template apply rust /tmp/my-rust-lib --name my_rust_lib
-dp template apply cpp /tmp/my-cpp-lib --name my_cpp_lib
-dp template apply python /tmp/my-python-tool --name my_python_tool
+<pre><code class="language-sh">wing init
+wing template builtins list
+wing template apply go /tmp/my-go-tool --name my_go_tool
+wing template apply zig /tmp/my-zig-tool --name my_zig_tool
+wing template apply nim /tmp/my-nim-tool --name my_nim_tool
+wing template apply rust /tmp/my-rust-lib --name my_rust_lib
+wing template apply cpp /tmp/my-cpp-lib --name my_cpp_lib
+wing template apply python /tmp/my-python-tool --name my_python_tool
 </code></pre>
 <p>Python defaults to the <code>nix</code> flavour: Python, the build backend, pytest, and
 Ruff are composed with <code>python.withPackages</code> in <code>flake.nix</code>, and no virtual
 environment is created. Optional environment-manager flavours keep the manager
 itself available through Nix:</p>
-<pre><code class="language-sh">dp template apply python /tmp/my-uv-tool --name my_uv_tool --flavour uv
-dp template apply python /tmp/my-pixi-tool --name my_pixi_tool --flavour pixi
-dp template apply python /tmp/my-mamba-tool --name my_mamba_tool --flavour micromamba
+<pre><code class="language-sh">wing template apply python /tmp/my-uv-tool --name my_uv_tool --flavour uv
+wing template apply python /tmp/my-pixi-tool --name my_pixi_tool --flavour pixi
+wing template apply python /tmp/my-mamba-tool --name my_mamba_tool --flavour micromamba
 </code></pre>
 <p><code>--flavor</code> is accepted as an alias for <code>--flavour</code>. The generated Makefile
 provides <code>make setup</code>; the <code>uv</code>, <code>pixi</code>, and <code>micromamba</code> flavours create their
@@ -194,8 +194,8 @@ respective local environments only when that target or another dependent target
 is run.</p>
 <p>Template placeholders are replaced in both file contents and file names, so
 <code>{{snake_name}}.nimble</code> becomes <code>my_nim_tool.nimble</code>.</p>
-<p>The bundled templates are embedded in the <code>dp</code> binary. <code>dp init</code> writes them to
-<code>$XDG_DATA_HOME/devpilot/templates</code> and registers <code>go</code>, <code>zig</code>, <code>nim</code>, <code>rust</code>,
+<p>The bundled templates are embedded in the <code>wing</code> binary. <code>wing init</code> writes them to
+<code>$XDG_DATA_HOME/wing/templates</code> and registers <code>go</code>, <code>zig</code>, <code>nim</code>, <code>rust</code>,
 <code>cpp</code>, and <code>python</code>.</p>
 <p>The embedded templates share one common base for files like <code>.envrc</code>,
 <code>flake.nix</code>, <code>README.md</code>, <code>.gitignore</code>, and <code>PROJECT</code>; each language directory

@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Machines - devpilot</title>
+        <title>Machines - wing</title>
 
 
         <!-- Custom HTML head -->
@@ -120,7 +120,7 @@
                         </button>
                     </div>
 
-                    <h1 class="menu-title">devpilot</h1>
+                    <h1 class="menu-title">wing</h1>
 
                     <div class="right-buttons">
                         <a href="print.html" title="Print this book" aria-label="Print this book">
@@ -157,12 +157,12 @@
 integration: <code>connect</code>, <code>check --ssh</code>, and <code>sync</code> all reuse one <strong>ControlMaster
 socket</strong> per machine+interface, so the first connection stays open for ~60s and
 every later operation piggybacks on it (no repeated handshakes).</p>
-<pre><code class="language-sh">dp machine add lab 127.0.0.1:22:local --username "$USER"
-dp machine add bastion 10.0.0.5:22:local --username ops \
+<pre><code class="language-sh">wing machine add lab 127.0.0.1:22:local --username "$USER"
+wing machine add bastion 10.0.0.5:22:local --username ops \
   --proxy-jump gate.example.com --forward-agent
-dp machine ssh-config lab
-dp machine connect lab --dry-run
-dp machine check lab --ssh --timeout 2000
+wing machine ssh-config lab
+wing machine connect lab --dry-run
+wing machine check lab --ssh --timeout 2000
 </code></pre>
 <h2 id="per-machine-ssh-options"><a class="header" href="#per-machine-ssh-options">Per-machine SSH options</a></h2>
 <ul>
@@ -173,19 +173,19 @@ dp machine check lab --ssh --timeout 2000
 <p>These are stored on the machine and applied by <code>connect</code>, <code>check --ssh</code>, the
 generated <code>ssh-config</code>, and by <code>sync</code> (via rsync's <code>--rsh</code>).</p>
 <h2 id="commands"><a class="header" href="#commands">Commands</a></h2>
-<pre><code class="language-sh">dp machine add NAME IP[:PORT][:IFACE]... [-u USER] [-k KEY] [-J PROXY] [-A]
-dp machine set NAME [-u USER] [-k KEY] [-J PROXY] [-A|--no-forward-agent]
-dp machine list [--raw] [--json]
-dp machine info NAME
-dp machine ssh-config [NAME]          # IdentitiesOnly, StrictHostKeyChecking
+<pre><code class="language-sh">wing machine add NAME IP[:PORT][:IFACE]... [-u USER] [-k KEY] [-J PROXY] [-A]
+wing machine set NAME [-u USER] [-k KEY] [-J PROXY] [-A|--no-forward-agent]
+wing machine list [--raw] [--json]
+wing machine info NAME
+wing machine ssh-config [NAME]          # IdentitiesOnly, StrictHostKeyChecking
                                        # accept-new, ControlMaster, ProxyJump…
-dp machine check NAME [--ssh] [--timeout MS]   # TCP by default; --ssh = auth test
-dp machine check --all [--ssh]
-dp machine connect NAME [--interface IFACE] [--command CMD] [--dry-run]
-dp machine host add/remove NAME IP[:PORT][:IFACE]
-dp machine rename OLD NEW
-dp machine pick
-dp machine remove NAME
+wing machine check NAME [--ssh] [--timeout MS]   # TCP by default; --ssh = auth test
+wing machine check --all [--ssh]
+wing machine connect NAME [--interface IFACE] [--command CMD] [--dry-run]
+wing machine host add/remove NAME IP[:PORT][:IFACE]
+wing machine rename OLD NEW
+wing machine pick
+wing machine remove NAME
 </code></pre>
 <p>The interface name (the third <code>IP:PORT:IFACE</code> field) must be <code>local</code> or a real
 network interface on this machine — it labels the route, not the remote side.</p>
