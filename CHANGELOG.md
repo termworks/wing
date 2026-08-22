@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.5.3] - 2026-08-22
+
+### <!-- 7 -->⚙️ Miscellaneous Tasks
+
+- Build static musl linux only, drop macos
+
+### Build
+
+- Make the static musl binary the default
+
 ## [0.5.2] - 2026-08-22
 
 ### <!-- 1 -->🐛 Bug Fixes
