@@ -6,7 +6,6 @@ import ../apply
 import ../builtins/registry
 import ../builtins/flavours
 import ../builtins/install
-import ../builtins/paths
 import ../cliargs
 import ../jsonfmt
 import ../store/templates
@@ -61,7 +60,7 @@ proc handleTemplate*(argsIn: seq[string]) =
     rejectUnknownOptions(args)
     case action
     of "list", "ls":
-      printBuiltinTemplates(builtinTemplatesRoot(), raw, asJson)
+      printBuiltinTemplates(raw, asJson)
     of "install", "add", "seed":
       if raw or asJson:
         die("--raw and --json are only valid with wing template builtins list", 2)

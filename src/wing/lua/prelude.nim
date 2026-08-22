@@ -12,6 +12,7 @@ local wing = {}
 -- rather than appended, so registering a name twice replaces it: that is what lets a user config
 -- override a bundled template instead of ending up with two of them.
 wing.templates = {}
+wing.__root = ""
 
 function wing.template(name, spec)
   if type(name) ~= "string" or name == "" then
@@ -21,6 +22,9 @@ function wing.template(name, spec)
     error("wing.template('" .. tostring(name) .. "') requires a table", 2)
   end
   spec.name = name
+  -- Where this was declared, so the spec can find its own files later. Set by the host before each
+  -- manifest; empty for a user config, whose templates name an absolute `dir` instead.
+  spec.__root = wing.__root or ""
   wing.templates[name] = spec
 end
 

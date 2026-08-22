@@ -228,14 +228,14 @@ let initPrefix = "XDG_DATA_HOME=" & quoteShell(initDataHome) & " HOME=" &
 # reach rather than writing one out. Here that is the repository's own templates/, via the cwd.
 let initOutput = checked(initPrefix & quoteShell(Binary) & " init")
 doAssert initOutput.contains("Initialized wing data")
-doAssert initOutput.contains("6 declared"), initOutput
+doAssert initOutput.contains("Declared: 6"), initOutput
 
 # A reachable tree that declares nothing is reported, not treated as a failure.
 let emptyRoot = "/tmp/wing-init-empty-templates"
 resetDir(emptyRoot)
 let bareInit = checked("WING_TEMPLATE_DIR=" & quoteShell(emptyRoot) & " " &
     initPrefix & quoteShell(Binary) & " init")
-doAssert bareInit.contains("0 declared"), bareInit
+doAssert bareInit.contains("Declared: 0"), bareInit
 let initializedTemplates = checked(initPrefix & quoteShell(Binary) &
     " template list --raw")
 doAssert initializedTemplates.contains("go\tgo\t")

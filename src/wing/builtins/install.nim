@@ -32,20 +32,16 @@ proc copyBuiltinTemplateDir*(srcRoot, dstRoot, relRoot: string;
     of pcLinkToFile, pcLinkToDir:
       discard
 
-proc materializeBuiltinTemplate*(root: string; tmpl: TemplateSpec;
+proc materializeBuiltinTemplate*(tmpl: TemplateSpec;
     requestedFlavour = ""): string =
   let flavour = normalizeBuiltinFlavour(tmpl, requestedFlavour)
-  let commonPath = builtinCommonPath(root)
-  let overlayPath = builtinTemplateBasePath(root, tmpl)
-  if not dirExists(commonPath):
-    die("Bundled template common path '" & commonPath & "' does not exist", 2)
+  let overlayPath = builtinTemplateBasePath(tmpl)
   if not dirExists(overlayPath):
-    die("Bundled template path '" & overlayPath & "' does not exist", 2)
+    die("Template path '" & overlayPath & "' does not exist", 2)
   if flavour.len > 0:
-    let flavourPath = builtinTemplateFlavourPath(root, tmpl, flavour)
+    let flavourPath = builtinTemplateFlavourPath(tmpl, flavour)
     if not dirExists(flavourPath):
-      die("Bundled template flavour path '" & flavourPath &
-          "' does not exist", 2)
+      die("Template flavour path '" & flavourPath & "' does not exist", 2)
 
   let outputName =
     if flavour.len > 0 and flavour != tmpl.defaultFlavour:
@@ -56,18 +52,21 @@ proc materializeBuiltinTemplate*(root: string; tmpl: TemplateSpec;
   if dirExists(result):
     removeDir(result)
   createDir(result)
-  copyBuiltinTemplateDir(commonPath, result, "", tmpl, flavour)
+  # common/ from every root, least specific first, then this template, then its flavour. Each layer
+  # overwrites the one before, which is how one file in a user common/ replaces one bundled file.
+  for common in commonPaths():
+    copyBuiltinTemplateDir(common, result, "", tmpl, flavour)
   copyBuiltinTemplateDir(overlayPath, result, "", tmpl, flavour)
   if flavour.len > 0:
-    copyBuiltinTemplateDir(builtinTemplateFlavourPath(root, tmpl, flavour),
+    copyBuiltinTemplateDir(builtinTemplateFlavourPath(tmpl, flavour),
         result, "", tmpl, flavour)
 
-proc printBuiltinTemplates*(root: string; raw, asJson: bool) =
+proc printBuiltinTemplates*(raw, asJson: bool) =
   if asJson:
     echo "["
     let specs = builtinSpecs()
     for i, tmpl in specs:
-      let path = if root.len > 0: builtinTemplatePath(root, tmpl) else: ""
+      let path = builtinTemplatePath(tmpl)
       let suffix = if i == specs.high: "" else: ","
       echo "  {\"name\": " & jsonString(tmpl.name) &
           ", \"description\": " & jsonString(tmpl.description) &
@@ -76,13 +75,13 @@ proc printBuiltinTemplates*(root: string; raw, asJson: bool) =
           ", \"framework\": " & jsonString(tmpl.framework) &
           ", \"flavours\": " & jsonStringArray(builtinTemplateFlavours(tmpl)) &
           ", \"default_flavour\": " & jsonString(tmpl.defaultFlavour) &
-          ", \"available\": " & (if builtinTemplateAvailable(root,
+          ", \"available\": " & (if builtinTemplateAvailable(
               tmpl): "true" else: "false") &
           "}" & suffix
     echo "]"
   elif raw:
     for tmpl in builtinSpecs():
-      let path = if root.len > 0: builtinTemplatePath(root, tmpl) else: ""
+      let path = builtinTemplatePath(tmpl)
       echo tmpl.name & "\t" & tmpl.language & "\t" & path
   else:
     echo table(
@@ -92,16 +91,16 @@ proc printBuiltinTemplates*(root: string; raw, asJson: bool) =
         it.description,
         it.language,
         builtinFlavourSummary(it),
-        if root.len > 0: builtinTemplatePath(root, it) else: "None",
-        if builtinTemplateAvailable(root, it): "ready" else: "missing"
+        builtinTemplatePath(it),
+        if builtinTemplateAvailable(it): "ready" else: "missing"
       ])
     )
 
 proc installBuiltinTemplates*(path: string; templates: var seq[Template];
-    force: bool; sourceRoot = "") =
-  let root = if sourceRoot.len > 0: sourceRoot else: builtinTemplatesRoot()
-  if root.len == 0:
-    die("No templates found. Set WING_TEMPLATE_DIR, or put a template tree in the data dir", 2)
+    force: bool) =
+  if templateRoots().len == 0:
+    die("No templates found. Set WING_TEMPLATE_DIR, or put a tree in " &
+        userTemplatesRoot(), 2)
 
   var added = 0
   var updated = 0
@@ -109,7 +108,7 @@ proc installBuiltinTemplates*(path: string; templates: var seq[Template];
   templates = templates.filterIt(not @["go-cli", "zig-cli", "nim-cli"].contains(
       it.name))
   for builtin in builtinSpecs():
-    let templatePath = materializeBuiltinTemplate(root, builtin)
+    let templatePath = materializeBuiltinTemplate(builtin)
 
     var found = -1
     for i, tmpl in templates:
@@ -175,7 +174,4 @@ proc templateSourceForFlavour*(tmpl: Template; requested: string;
   if not hasRequested:
     return
 
-  let root = builtinTemplatesRoot()
-  if root.len == 0:
-    die("No templates found. Set WING_TEMPLATE_DIR, or put a template tree in the data dir", 2)
-  result.path = materializeBuiltinTemplate(root, builtin, result.flavour)
+  result.path = materializeBuiltinTemplate(builtin, result.flavour)

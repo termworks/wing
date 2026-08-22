@@ -47,6 +47,9 @@ type
   # What a template.lua declares about itself. Replaces the compiled-in BuiltinTemplate record.
   TemplateSpec* = object
     name*: string
+    # The template root this was declared in. A spec resolves its own files, because with a search
+    # path of roots the root is a property of the declaration, not of the call site.
+    root*: string
     description*: string
     dir*: string
     language*: string

@@ -11,11 +11,50 @@ returns nothing — wing reads the tables back once every chunk has run.
 | path | what it is |
 |---|---|
 | `<templates>/<name>/template.lua` | a template describing itself |
-| `$XDG_CONFIG_HOME/wing/init.lua` | your config: add, override, extend |
+| `$XDG_CONFIG_HOME/wing/templates/` | your own template tree |
+| `$XDG_CONFIG_HOME/wing/init.lua` | your config: settings, overrides, placeholders, hooks |
 
-The template tree is found in this order: `$WING_TEMPLATE_DIR`, then `<data dir>/templates`, then
-`./templates`, then beside the binary. Templates are **not** carried inside the binary — a fresh
-install has none until you put a tree where wing can find it.
+Templates are **not** carried inside the binary — a fresh install has none until a tree is
+reachable.
+
+## Template roots
+
+Every one of these is searched, **least specific first**, and a later root overrides an earlier one
+by name:
+
+```
+<binary>/../share/wing/templates
+<binary>/templates
+./templates
+<data dir>/templates
+$XDG_CONFIG_HOME/wing/templates      ← yours, wins
+```
+
+`$WING_TEMPLATE_DIR` is the exception: set it and *only* that tree is used, which is what a
+reproducible build and a test both want.
+
+So your own tree looks like the bundled one:
+
+```
+~/.config/wing/templates/
+  common/flake.nix       layered over the bundled common/
+  go/template.lua        replaces the bundled "go" outright
+  mine/
+    template.lua
+    base/  flavours/uv/  flavours work here too
+```
+
+### common/ layers
+
+A template is assembled by stacking `common/` → the template's own files → its flavour, each layer
+overwriting the last. Roots add one more dimension to that same stack: **every** root's `common/`
+applies, in search order.
+
+That means overriding one shared file is dropping one file. Put a `flake.nix` in
+`~/.config/wing/templates/common/` and it beats the bundled one, while `.gitignore`, `PROJECT` and
+`README.md` still come from the bundled tree.
+
+A `common/` is shared extras, not a requirement — a template that only has its own files works.
 
 ## Declaring a template
 
@@ -63,8 +102,16 @@ local wing = require("wing")
 -- replace a bundled template outright
 wing.template("go", { description = "my go template", language = "go" })
 
--- add one that lives anywhere
+-- add one whose files live outside every root: an absolute dir is taken as written
 wing.template("paper", { description = "a LaTeX paper", dir = "/home/me/templates/paper" })
+```
+
+Overriding a name from `init.lua` without naming a `dir` keeps the files it did not mention: the
+directory is looked up across the roots, most specific first. So this replaces the description and
+still builds the bundled go template:
+
+```lua
+wing.template("go", { description = "my wording", language = "go" })
 ```
 
 ### Placeholders

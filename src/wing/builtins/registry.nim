@@ -21,7 +21,7 @@ proc ensureLoaded() =
     # alternative is a template silently missing from the listing, which reads as "wing lost my
     # template" rather than "line 4 of this file has a typo".
     try:
-      configVm = openConfig(builtinTemplatesRoot(), userConfigPath())
+      configVm = openConfig(templateRoots(), userConfigPath())
     except LuaError as err:
       die("wing config: " & err.msg)
     cached = readSpecs(configVm.L)

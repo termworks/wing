@@ -64,6 +64,7 @@ proc readSpecs*(L: LuaState): seq[TemplateSpec] =
         name: name,
         description: fieldStr(L, spec, "description", ""),
         dir: fieldStr(L, spec, "dir", name),
+        root: fieldStr(L, spec, "__root", ""),
         language: fieldStr(L, spec, "language", ""),
         framework: fieldStr(L, spec, "framework", ""),
         tags: fieldStrSeq(L, spec, "tags"),
@@ -86,7 +87,14 @@ proc manifestPaths*(root: string): seq[string] =
         result.add(manifest)
   result.sort()
 
-proc openConfig*(root: string; userConfig = ""): LuaVm =
+proc setRoot(vm: LuaVm; root: string) =
+  ## Tell the prelude which root the next manifest belongs to.
+  discard lua_getglobal(vm.L, "wing")
+  discard lua_pushlstring(vm.L, root.cstring, root.len.csize_t)
+  lua_setfield(vm.L, -2, "__root")
+  lua_pop(vm.L, 1)
+
+proc openConfig*(roots: seq[string]; userConfig = ""): LuaVm =
   ## Run the bundled manifests, then the user's config, and hand back the state they registered
   ## into. The state stays open because placeholders and apply handlers are Lua functions that are
   ## called later, during an apply.
@@ -97,9 +105,14 @@ proc openConfig*(root: string; userConfig = ""): LuaVm =
   result = newLuaVm()
   result.run(WingPrelude, "=[wing prelude]")
 
-  for manifest in manifestPaths(root):
-    result.run(readFile(manifest), "@" & manifest)
+  # Least specific root first, so a later one overriding a name is the same rule the user config
+  # uses when it registers a name a manifest already claimed.
+  for root in roots:
+    setRoot(result, root)
+    for manifest in manifestPaths(root):
+      result.run(readFile(manifest), "@" & manifest)
 
+  setRoot(result, "")
   if userConfig.len > 0 and fileExists(userConfig):
     result.run(readFile(userConfig), "@" & userConfig)
 
