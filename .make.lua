@@ -1,7 +1,7 @@
 -- wing's build, as recipes. This file replaced the Makefile; there is no other.
 --
 --   make                 the recipes, with what each of them says it does
---   make build           the release binary
+--   make build           the shipping binary: static musl, runs anywhere
 --   make test            the suite
 --   make install         the binary, into $PREFIX/bin
 --   make verify          the whole local gate
@@ -59,6 +59,19 @@ local function grouped(n)
   return out
 end
 
+-- Asked of the ELF, not assumed. wing has two builds and only one of them ships, so a report that
+-- always claimed "static" would be wrong half the time -- and that is the half nobody notices
+-- until the binary is on a machine with a different libc.
+local function linkage(path)
+  local segments = oslo.run{ "readelf", "-l", path, capture = true }
+  local dynamic = oslo.run{ "readelf", "-d", path, capture = true }
+  if not segments.ok then return nil end
+  if (segments.out or ""):find("program interpreter") or (dynamic.out or ""):find("NEEDED") then
+    return "dynamic"
+  end
+  return "static"
+end
+
 local function report()
   local stat = oslo.fs.stat(BIN)
   if not stat then return end
@@ -69,6 +82,15 @@ local function report()
   line("binary", BIN)
   -- Bytes beside megabytes: `1.10 MB` cannot be subtracted from last week's `1.08 MB` to get one.
   line("size", megabytes .. dim("   " .. grouped(stat.size) .. " bytes"))
+
+  local kind = linkage(BIN)
+  if kind == "static" then
+    line("linking", oslo.ui.style("✓ static", { fg = "green" }) ..
+                    dim("   no runtime dependencies"))
+  elseif kind == "dynamic" then
+    line("linking", oslo.ui.style("dynamic", { fg = "yellow" }) ..
+                    dim("   make build for the one that ships"))
+  end
   print("")
 end
 
@@ -77,16 +99,50 @@ end
 make.recipe{ name = "version", desc = "what this checkout calls itself",
              run = function() print(("%s v%s"):format(NAME, VERSION)) end }
 
+-- musl-gcc is deliberately NOT in the dev shell. Adding musl there puts its headers on the
+-- default search path, so an ordinary `nim c` compiles against musl and links against glibc --
+-- which builds without a word and then segfaults. It is borrowed from nix for this one command.
+local function nim_musl()
+  local args = { "c", "-d:release",
+                 "--gcc.exe:musl-gcc", "--gcc.linkerexe:musl-gcc", "--passL:-static",
+                 "--out:" .. BIN, ENTRY }
+  if oslo.run{ "sh", "-c", "command -v musl-gcc", capture = true }.ok then
+    sh.nim(table.unpack(args))
+  else
+    assert(oslo.run{ "sh", "-c", "command -v nix", capture = true }.ok,
+           "the static build needs musl-gcc: install musl-tools, or install nix to borrow one")
+    sh.nix("shell", "nixpkgs#musl.dev", "--command", "nim", table.unpack(args))
+  end
+end
+
+-- The one that gets installed and shipped, and what `make build` means. It refuses to finish
+-- unless the result really is static: "static" quietly coming out dynamic is only ever noticed by
+-- whoever the binary fails for, on the musl box it was built to run on.
 make.recipe{
-  name = "build",
-  desc = "the release binary",
+  name = "release-musl",
+  desc = "a static binary that needs nothing on the target machine",
+  run = function()
+    nim_musl()
+    assert(linkage(BIN) == "static", BIN .. " came out dynamic; it must not ship")
+    report()
+  end,
+}
+
+make.recipe{ name = "build", desc = "the shipping binary (static musl)",
+             deps = { "release-musl" } }
+
+make.alias("b", "build")
+
+-- Against the host libc, for when the edit-compile loop matters more than portability. Not what
+-- install or the release uses.
+make.recipe{
+  name = "build-gnu",
+  desc = "a dynamic binary against the host libc, for iterating",
   run = function()
     sh.nim("c", "-d:release", "--out:" .. BIN, ENTRY)
     report()
   end,
 }
-
-make.alias("b", "build")
 
 -- Bare words reach the binary as they are written; anything with a leading dash goes in --args,
 -- because make parses a flag before the recipe ever sees it.
