@@ -11,6 +11,12 @@ resetDir(proj)
 createDir(proj / "bin")
 writeFile(proj / ".envrc", "export FOO=bar\nexport PATH=$PWD/bin:$PATH\n")
 
+# Where the unload leg lands. Its own .envrc is left un-allowed on purpose: leaving a project
+# must unload it either way, whether the new directory has no .envrc or one that is refused.
+let outside = "/tmp/wing-env-outside"
+resetDir(outside)
+writeFile(outside / ".envrc", "export OUTSIDE=nope\n")
+
 # --- allow gate -------------------------------------------------------------
 # Before authorization, export must refuse and emit nothing.
 let blocked = run("cd " & quoteShell(proj) & " && WING_DIFF='' " & wing &
@@ -49,12 +55,12 @@ eval "$(__WING__ env export bash 2>/dev/null)"
 eval "$(__WING__ env export bash 2>/dev/null)"
 BINS=$(echo "$PATH" | tr ':' '\n' | grep -c 'wing-env-proj/bin')
 echo "CYCLES bins=$BINS foo=$FOO"
-cd /tmp
+cd '__OUTSIDE__'
 eval "$(__WING__ env export bash 2>/dev/null)"
-echo "UNLOAD foo=${FOO:-unset} bins=$(echo "$PATH" | tr ':' '\n' | grep -c 'wing-env-proj/bin')"
+echo "UNLOAD foo=${FOO:-unset} outside=${OUTSIDE:-unset} bins=$(echo "$PATH" | tr ':' '\n' | grep -c 'wing-env-proj/bin')"
 """
-let script = harness.replace("__PROJ__", proj).replace("__WING__", quoteShell(
-    Binary))
+let script = harness.replace("__PROJ__", proj).replace("__OUTSIDE__",
+    outside).replace("__WING__", quoteShell(Binary))
 let cycleRes = run(envPrefix & "bash -c " & quoteShell(script))
 doAssert cycleRes.code == 0, cycleRes.output
 let accMsg = "PATH accumulated across cycles: " & cycleRes.output
@@ -62,6 +68,11 @@ doAssert cycleRes.output.contains("bins=1"), accMsg
 doAssert cycleRes.output.contains("foo=bar"), cycleRes.output
 let unloadMsg = "unload did not clear FOO: " & cycleRes.output
 doAssert cycleRes.output.contains("UNLOAD foo=unset"), unloadMsg
+doAssert cycleRes.output.contains("bins=0"), "unload left the project bin on PATH: " &
+    cycleRes.output
+# The blocked .envrc must not have been applied while unloading the previous one.
+doAssert cycleRes.output.contains("outside=unset"), "blocked .envrc was applied: " &
+    cycleRes.output
 
 # --- json export parses -----------------------------------------------------
 let jsonOut = run("cd " & quoteShell(proj) & " && WING_DIFF='' " & wing &

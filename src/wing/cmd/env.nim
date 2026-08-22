@@ -26,20 +26,27 @@ proc cmdExport*(shell: string): int =
   let dpDiff = decodeDiff(current.getOrDefault(DiffMarker))
   let previous = revert(current, dpDiff)
 
+  # A refused .envrc still unloads whatever the last directory applied. Returning early left one
+  # project's overlay live in a directory whose own .envrc was never trusted, so `cd` out of a
+  # project into a blocked directory kept its PATH and secrets exported.
   var newEnv: EnvMap
+  var refused = false
   if toLoad.len == 0:
     newEnv = copyMap(previous)
+  elif not isAllowed(toLoad):
+    stderr.writeLine("wing env: .envrc blocked — run 'wing env allow'")
+    stderr.writeLine("        " & toLoad)
+    newEnv = copyMap(previous)
+    refused = true
   else:
-    if not isAllowed(toLoad):
-      stderr.writeLine("wing env: .envrc blocked — run 'wing env allow'")
-      stderr.writeLine("        " & toLoad)
-      return 1
     let run = runEnvrc(toLoad, previous)
     if run.code != 0:
       stderr.writeLine("wing env: .envrc evaluation failed (exit " & $run.code &
           ")")
-      return 1
-    newEnv = parseDump(run.output)
+      newEnv = copyMap(previous)
+      refused = true
+    else:
+      newEnv = parseDump(run.output)
 
   # The new reversible diff (pristine -> pristine + overlay).
   let newDiff = buildDiff(previous, newEnv)
@@ -48,7 +55,7 @@ proc cmdExport*(shell: string): int =
   # What the shell must eval to go from its current state to newEnv.
   let shellDiff = buildDiff(current, newEnv)
   stdout.write(emitForShell(shell, shellDiff))
-  return 0
+  return if refused: 1 else: 0
 
 proc resolveEnvrc*(path: string): string =
   ## Resolve a user-provided path (a directory, an .envrc file, or empty) to
