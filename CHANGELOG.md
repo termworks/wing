@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.5.2] - 2026-08-22
+
+### <!-- 1 -->🐛 Bug Fixes
+
+- Format every Nim source, not one level deep
+- Unload a project when the next .envrc is refused
+- Read the version from wing.nimble
+
+### <!-- 2 -->🚜 Refactor
+
+- Drop the bobabrew --path workaround
+
 ## [0.5.1] - 2026-08-22
 
 ### <!-- 0 -->⛰️  Features

@@ -1,7 +1,7 @@
 import std/os
 
 const
-  Version = "0.5.1"
+  Version = "0.5.2"
   About = "{{PROJECT_NAME}}"
 
 proc showHelp() =

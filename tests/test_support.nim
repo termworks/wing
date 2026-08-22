@@ -11,21 +11,8 @@ proc checked*(command: string): string =
   doAssert res.code == 0, command & "\n" & res.output
   res.output
 
-proc bobabrewPathFlag(): string =
-  let nimbleDir = getEnv("NIMBLE_DIR", getHomeDir() / ".nimble")
-  let candidates = @[
-    nimbleDir / "pkgcache" / "githubcom_bresillabobabrew" / "src",
-    nimbleDir / "pkgcache" / "githubcom_bresillabobabrew_0.1.0" / "src",
-    getCurrentDir() / ".." / "bobabrew" / "src"
-  ]
-  for candidate in candidates:
-    if dirExists(candidate):
-      return " --path:" & quoteShell(candidate)
-  ""
-
 proc compileBinary*() =
-  discard checked("nim c" & bobabrewPathFlag() & " --out:" &
-      quoteShell(Binary) & " src/wing.nim")
+  discard checked("nim c --out:" & quoteShell(Binary) & " src/wing.nim")
 
 proc freshEnv*(name: string): string =
   let dataHome = "/tmp/wing-" & name & "-data"
