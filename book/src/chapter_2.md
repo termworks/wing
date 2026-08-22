@@ -1,6 +1,6 @@
 # Installation
 
-Build locally with the repo Makefile:
+Build locally with the repo recipes (`.make.lua`, via [oslo](https://github.com/termworks/oslo)):
 
 ```sh
 make build

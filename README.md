@@ -51,7 +51,7 @@ make verify
 Run:
 
 ```sh
-make run ARGS="--help"
+make run --args="--help"
 ```
 
 After `make build`, the binary is available at:

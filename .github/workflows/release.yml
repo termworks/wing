@@ -47,9 +47,9 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-${{ runner.arch }}-nim-
       - name: Install dependencies
-        run: make tidy
+        run: nimble install -y --depsOnly
       - name: Build release binary
-        run: make build
+        run: nim c -d:release --out:wing src/wing.nim
       - name: Package
         run: tar -czf "${{ matrix.artifact }}.tar.gz" wing
       - name: Upload artifact
