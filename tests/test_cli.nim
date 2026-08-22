@@ -33,12 +33,6 @@ let projects = checked(dp & "project list --raw")
 doAssert "demo\tdefault\t/tmp/demo\tgo" in projects
 doAssert checked(dp & "project info demo").contains("Project: demo")
 
-discard checked(dp & "workspace add lab --path /tmp/lab --projects demo")
-discard checked(dp & "workspace component lab add tool --type tool --path /tmp/tool")
-let workspace = checked(dp & "workspace info lab")
-doAssert workspace.contains("Workspace: lab")
-doAssert workspace.contains("tool: tool")
-
 discard checked(dp & "machine add lab 127.0.0.1:22:local --username tester --key /tmp/key")
 let machines = checked(dp & "machine list --raw")
 doAssert "lab\ttester\t127.0.0.1\t22\tlocal" in machines
@@ -57,11 +51,9 @@ doAssert readFile(targetRoot / "README.md") == "hello sample_app"
 
 let populatedSnapshot = checked(dp & "tui --snapshot")
 doAssert populatedSnapshot.contains("Projects: 1")
-doAssert populatedSnapshot.contains("Workspaces: 1")
 doAssert populatedSnapshot.contains("Templates: 1")
 
 discard checked(dp & "project remove demo")
-discard checked(dp & "workspace remove lab")
 discard checked(dp & "template remove base")
 discard checked(dp & "machine remove lab")
 

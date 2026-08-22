@@ -15,11 +15,6 @@ doAssert project.command.contains("--framework bobabrew")
 doAssert project.command.contains("--tags cli")
 doAssert project.command.contains("--tags tui")
 
-let workspace = workspaceFormCommand("lab", "/tmp/lab", "test workspace")
-doAssert workspace.ok
-doAssert workspace.command.contains("workspace add lab")
-doAssert workspace.command.contains("--description 'test workspace'")
-
 let machine = machineFormCommand("lab", "tester", "/tmp/key",
     "127.0.0.1:22:local")
 doAssert machine.ok

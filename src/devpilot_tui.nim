@@ -52,9 +52,6 @@ type
     promptProjectLanguage
     promptProjectFramework
     promptProjectTags
-    promptWorkspaceName
-    promptWorkspacePath
-    promptWorkspaceDescription
     promptMachineName
     promptMachineUsername
     promptMachineKey
@@ -163,19 +160,6 @@ proc projectFormCommand*(name, path, namespace, language, framework,
   if framework.strip().len > 0:
     command.add(" --framework " & quoteShell(framework.strip()))
   command.add(tagArgs(tags))
-  formCommand(command)
-
-proc workspaceFormCommand*(name, path, description: string): FormBuildResult =
-  let nameError = requireField(name, "workspace name")
-  if nameError.len > 0:
-    return formError(nameError)
-  let pathError = requireField(path, "workspace path")
-  if pathError.len > 0:
-    return formError(pathError)
-  var command = "workspace add " & quoteShell(name.strip()) & " --path " &
-      quoteShell(path.strip())
-  if description.strip().len > 0:
-    command.add(" --description " & quoteShell(description.strip()))
   formCommand(command)
 
 proc machineFormCommand*(name, username, keyPath,
@@ -301,17 +285,17 @@ proc cell(bg, fg: Color; width: int; text: string; right = false;
 proc titleColor(title: string): Color =
   case title
   of "Projects": cPrimary
-  of "Workspaces": cTag
   of "Machines": cWarn
   of "Templates": cOk
+  of "Sync": cTag
   else: cPrimary
 
 proc sectionIcon(title: string): string =
   case title
   of "Projects": "◆"
-  of "Workspaces": "▣"
   of "Machines": "●"
   of "Templates": "◇"
+  of "Sync": "⇄"
   else: "•"
 
 proc rowParts(section: DashboardSection; row: seq[string]): tuple[
@@ -323,10 +307,6 @@ proc rowParts(section: DashboardSection; row: seq[string]): tuple[
     result.right = if row.len > 3: dash(row[3]) else: "—"
     result.meta = "namespace " & (if row.len > 1: dash(row[1]) else: "—")
     result.desc = if row.len > 2: dash(row[2]) else: "—"
-  of "Workspaces":
-    result.right = if row.len > 2: dash(row[2]) else: "—"
-    result.meta = "components " & (if row.len > 3: dash(row[3]) else: "0")
-    result.desc = if row.len > 1: dash(row[1]) else: "—"
   of "Machines":
     result.right = if row.len > 1: dash(row[1]) else: "—"
     result.meta = if row.len > 2: dash(row[2]) else: "—"
@@ -335,6 +315,10 @@ proc rowParts(section: DashboardSection; row: seq[string]): tuple[
     result.right = if row.len > 3: dash(row[3]) else: "—"
     result.meta = if row.len > 1: dash(row[1]) else: "—"
     result.desc = if row.len > 2: dash(row[2]) else: "—"
+  of "Sync":
+    result.right = if row.len > 4: dash(row[4]) else: "—"
+    result.meta = if row.len > 2: dash(row[2]) else: "—"
+    result.desc = if row.len > 3: dash(row[3]) else: "—"
   else:
     result.right = if row.len > 1: dash(row[1]) else: "—"
     result.meta = row.join(" · ")
@@ -537,12 +521,12 @@ proc infoCommand(section: DashboardSection; row: seq[string]): string =
   of "Projects":
     let namespace = if row.len > 1: row[1] else: "default"
     "project --namespace " & quoteShell(namespace) & " info " & quoteShell(row[0])
-  of "Workspaces":
-    "workspace info " & quoteShell(row[0])
   of "Machines":
     "machine info " & quoteShell(row[0])
   of "Templates":
     "template info " & quoteShell(row[0])
+  of "Sync":
+    "sync info " & quoteShell(row[0])
   else:
     ""
 
@@ -553,12 +537,12 @@ proc deleteCommand(section: DashboardSection; row: seq[string]): string =
   of "Projects":
     let namespace = if row.len > 1: row[1] else: "default"
     "project --namespace " & quoteShell(namespace) & " remove " & quoteShell(row[0])
-  of "Workspaces":
-    "workspace remove " & quoteShell(row[0])
   of "Machines":
     "machine remove " & quoteShell(row[0])
   of "Templates":
     "template remove " & quoteShell(row[0])
+  of "Sync":
+    "sync remove " & quoteShell(row[0])
   else:
     ""
 
@@ -622,12 +606,13 @@ proc startAddForm(m: DevpilotApp; section: DashboardSection) =
   case section.title
   of "Projects":
     m.showPrompt(promptProjectName, section.title & " form · name", "")
-  of "Workspaces":
-    m.showPrompt(promptWorkspaceName, section.title & " form · name", "")
   of "Machines":
     m.showPrompt(promptMachineName, section.title & " form · name", "")
   of "Templates":
     m.showPrompt(promptTemplateName, section.title & " form · name", "")
+  of "Sync":
+    m.showOverlay("Add sync target",
+        "Use the CLI — sync targets need several fields:\n  dp sync add NAME --project P --machine M --remote PATH")
   else:
     m.showOverlay("Validation", "Unsupported form section: " & section.title)
 
@@ -685,18 +670,6 @@ proc acceptPrompt(m: DevpilotApp; value: string) =
     m.formTags = v
     m.finishForm(projectFormCommand(m.formName, m.formPath, m.formNamespace,
         m.formLanguage, m.formFramework, m.formTags))
-  of promptWorkspaceName:
-    m.formName = v
-    m.showPrompt(promptWorkspacePath, m.formSectionTitle & " form · path",
-        getCurrentDir())
-  of promptWorkspacePath:
-    m.formPath = v
-    m.showPrompt(promptWorkspaceDescription, m.formSectionTitle &
-        " form · description", "")
-  of promptWorkspaceDescription:
-    m.formDescription = v
-    m.finishForm(workspaceFormCommand(m.formName, m.formPath,
-        m.formDescription))
   of promptMachineName:
     m.formName = v
     m.showPrompt(promptMachineUsername, m.formSectionTitle &

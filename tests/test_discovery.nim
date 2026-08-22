@@ -56,10 +56,3 @@ discard checked(dp & "project --namespace alt import " & quoteShell(root) &
     " --depth 1")
 let altList = checked(dp & "project --namespace alt list --raw")
 doAssert altList.contains("goapp\talt")
-
-let workspace = checked(dp & "workspace discover lab " & quoteShell(root) &
-    " --depth 2")
-doAssert workspace.contains("Workspace 'lab' discovered with 2 projects")
-let workspaceInfo = checked(dp & "workspace info lab")
-doAssert workspaceInfo.contains("goapp")
-doAssert workspaceInfo.contains("nimapp")

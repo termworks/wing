@@ -4,9 +4,9 @@ const
   SchemaVersion* = 1
   StorageFiles* = [
     "projects.toml",
-    "workspaces.toml",
     "machines.toml",
-    "templates.toml"
+    "templates.toml",
+    "syncs.toml"
   ]
 
 proc storageStamp(): string =
@@ -26,12 +26,12 @@ proc defaultStorageContent(fileName: string): string =
   case fileName
   of "projects.toml":
     schemaHeader() & "projects = []\n"
-  of "workspaces.toml":
-    schemaHeader() & "workspaces = []\n"
   of "machines.toml":
     schemaHeader() & "machines = []\n"
   of "templates.toml":
     schemaHeader() & "templates = []\n"
+  of "syncs.toml":
+    schemaHeader() & "syncs = []\n"
   else:
     schemaHeader()
 

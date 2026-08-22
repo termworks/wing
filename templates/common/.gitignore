@@ -13,6 +13,13 @@
 /.zig-cache
 /zig-out
 /target
+/.venv
+/.pixi
+/.micromamba
+/.pytest_cache
+/.ruff_cache
+__pycache__/
+*.py[cod]
 compile_commands.json
 .complog
 .quickfix

@@ -12,7 +12,6 @@ resetDir(templateRoot)
 removeDir(exportPath)
 
 discard checked(dp & "project add demo --path /tmp/demo --language Nim")
-discard checked(dp & "workspace add lab --path /tmp/lab --projects demo")
 discard checked(dp & "machine add lab 127.0.0.1:22:local --username tester")
 discard checked(dp & "template add base --description desc --path " &
     quoteShell(templateRoot))
@@ -20,10 +19,6 @@ discard checked(dp & "template add base --description desc --path " &
 let projectsJson = parseJson(checked(dp & "project list --json"))
 doAssert projectsJson[0]["name"].getStr() == "demo"
 doAssert projectsJson[0]["language"].getStr() == "Nim"
-
-let workspaceJson = parseJson(checked(dp & "workspace info lab --json"))
-doAssert workspaceJson["name"].getStr() == "lab"
-doAssert workspaceJson["projects"][0].getStr() == "demo"
 
 let machinesJson = parseJson(checked(dp & "machine list --json"))
 doAssert machinesJson[0]["hosts"][0]["ip"].getStr() == "127.0.0.1"
@@ -33,7 +28,6 @@ doAssert templatesJson[0]["name"].getStr() == "base"
 
 let allJson = parseJson(checked(dp & "data export --format json"))
 doAssert allJson["projects"][0]["name"].getStr() == "demo"
-doAssert allJson["workspaces"][0]["name"].getStr() == "lab"
 
 discard checked(dp & "data export --format toml --path " & quoteShell(exportPath))
 doAssert fileExists(exportPath / "manifest.toml")
@@ -51,7 +45,8 @@ doAssert importedProject.contains("Project: demo")
 discard checked(dpImport & "data import " & quoteShell(exportPath) & " --merge")
 
 let completions = checked(dp & "completions bash")
-doAssert completions.contains("project workspace machine")
+doAssert completions.contains("project machine")
+doAssert not completions.contains("workspace")
 doAssert completions.contains("data")
 
 let markdown = checked(dp & "help --markdown")

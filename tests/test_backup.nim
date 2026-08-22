@@ -17,7 +17,6 @@ let created = checked(dp & "data backup create --path " & quoteShell(backupPath)
 doAssert created.contains("Backup created:")
 doAssert fileExists(backupPath / "manifest.toml")
 doAssert fileExists(backupPath / "projects.toml")
-doAssert fileExists(backupPath / "workspaces.toml")
 doAssert fileExists(backupPath / "machines.toml")
 doAssert fileExists(backupPath / "templates.toml")
 

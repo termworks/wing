@@ -6,7 +6,6 @@ Data is stored under `$XDG_DATA_HOME/devpilot` or
 Files:
 
 - `projects.toml`
-- `workspaces.toml`
 - `machines.toml`
 - `templates.toml`
 

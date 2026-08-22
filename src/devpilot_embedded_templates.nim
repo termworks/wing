@@ -4,7 +4,7 @@ type
     path*: string
     content*: string
 
-const EmbeddedTemplateFiles*: array[37, EmbeddedTemplateFile] = [
+const EmbeddedTemplateFiles*: array[50, EmbeddedTemplateFile] = [
   EmbeddedTemplateFile(
     group: "common",
     path: ".envrc",
@@ -165,6 +165,75 @@ const EmbeddedTemplateFiles*: array[37, EmbeddedTemplateFile] = [
     group: "cpp",
     path: "test/basic_test.cpp",
     content: staticRead("../templates/cpp/test/basic_test.cpp")
+  ),
+  EmbeddedTemplateFile(
+    group: "python",
+    path: "base/.github/workflows/release.yml",
+    content: staticRead(
+      "../templates/python/base/.github/workflows/release.yml")
+  ),
+  EmbeddedTemplateFile(
+    group: "python",
+    path: "base/.github/workflows/tests.yml",
+    content: staticRead("../templates/python/base/.github/workflows/tests.yml")
+  ),
+  EmbeddedTemplateFile(
+    group: "python",
+    path: "base/README.md",
+    content: staticRead("../templates/python/base/README.md")
+  ),
+  EmbeddedTemplateFile(
+    group: "python",
+    path: "base/pyproject.toml",
+    content: staticRead("../templates/python/base/pyproject.toml")
+  ),
+  EmbeddedTemplateFile(
+    group: "python",
+    path: "base/src/{{snake_name}}/__init__.py",
+    content: staticRead(
+      "../templates/python/base/src/{{snake_name}}/__init__.py")
+  ),
+  EmbeddedTemplateFile(
+    group: "python",
+    path: "base/src/{{snake_name}}/__main__.py",
+    content: staticRead(
+      "../templates/python/base/src/{{snake_name}}/__main__.py")
+  ),
+  EmbeddedTemplateFile(
+    group: "python",
+    path: "base/tests/test_cli.py",
+    content: staticRead("../templates/python/base/tests/test_cli.py")
+  ),
+  EmbeddedTemplateFile(
+    group: "python",
+    path: "flavours/nix/Makefile",
+    content: staticRead("../templates/python/flavours/nix/Makefile")
+  ),
+  EmbeddedTemplateFile(
+    group: "python",
+    path: "flavours/uv/Makefile",
+    content: staticRead("../templates/python/flavours/uv/Makefile")
+  ),
+  EmbeddedTemplateFile(
+    group: "python",
+    path: "flavours/pixi/Makefile",
+    content: staticRead("../templates/python/flavours/pixi/Makefile")
+  ),
+  EmbeddedTemplateFile(
+    group: "python",
+    path: "flavours/pixi/pixi.toml",
+    content: staticRead("../templates/python/flavours/pixi/pixi.toml")
+  ),
+  EmbeddedTemplateFile(
+    group: "python",
+    path: "flavours/micromamba/Makefile",
+    content: staticRead("../templates/python/flavours/micromamba/Makefile")
+  ),
+  EmbeddedTemplateFile(
+    group: "python",
+    path: "flavours/micromamba/environment.yml",
+    content: staticRead(
+      "../templates/python/flavours/micromamba/environment.yml")
   ),
   EmbeddedTemplateFile(
     group: "zig",
