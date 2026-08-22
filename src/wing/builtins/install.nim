@@ -9,6 +9,7 @@ import ../types
 import ../util
 import ./flavours
 import ./paths
+import ../templates/manifest
 import ./registry
 
 proc copyBuiltinTemplateDir*(srcRoot, dstRoot, relRoot: string;
@@ -22,6 +23,10 @@ proc copyBuiltinTemplateDir*(srcRoot, dstRoot, relRoot: string;
       createDir(dstPath)
       copyBuiltinTemplateDir(path, dstRoot, rel, tmpl, flavour)
     of pcFile:
+      # The manifest describes the template; it is not part of what the template produces. Only at
+      # the top level, so a template that legitimately generates a template.lua still can.
+      if relRoot.len == 0 and splitPath(path).tail == ManifestName:
+        continue
       createDir(parentDir(dstPath))
       writeFile(dstPath, renderBuiltinTemplate(readFile(path), tmpl, flavour))
     of pcLinkToFile, pcLinkToDir:

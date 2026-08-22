@@ -111,11 +111,14 @@ local function nim_musl()
   local lua = os.getenv("LUA_MUSL") or ""
   assert(musl ~= "" and lua ~= "",
          "the static build needs MUSL_DEV and LUA_MUSL from the dev shell: nix develop .#ci")
-  sh.env("WING_LUA=" .. lua, "nim", "c", "-d:release",
-         "--gcc.exe:" .. musl .. "/bin/musl-gcc",
-         "--gcc.linkerexe:" .. musl .. "/bin/musl-gcc",
-         "--passL:-static",
-         "--out:" .. BIN, ENTRY)
+  -- `oslo.run` rather than `sh.env`: oslo answers some commands in rows instead of running them,
+  -- and `env` is one of them -- so `sh.env(...)` returned happily having compiled nothing.
+  local built = oslo.run{ "env", "WING_LUA=" .. lua, "nim", "c", "-d:release",
+                          "--gcc.exe:" .. musl .. "/bin/musl-gcc",
+                          "--gcc.linkerexe:" .. musl .. "/bin/musl-gcc",
+                          "--passL:-static",
+                          "--out:" .. BIN, ENTRY }
+  assert(built.ok, "the static build failed")
 end
 
 -- The one that gets installed and shipped, and what `make build` means. It refuses to finish
@@ -126,7 +129,9 @@ make.recipe{
   desc = "a static binary that needs nothing on the target machine",
   run = function()
     nim_musl()
-    assert(linkage(BIN) == "static", BIN .. " came out dynamic; it must not ship")
+    local kind = linkage(BIN)
+    assert(kind ~= nil, BIN .. " was not produced, or readelf could not read it")
+    assert(kind == "static", BIN .. " came out dynamic; it must not ship")
     report()
   end,
 }
