@@ -23,27 +23,6 @@ local BIN = "wing"
 local ENTRY = "src/wing.nim"
 local PREFIX = os.getenv("PREFIX") or (os.getenv("HOME") .. "/.local")
 
--- bobabrew is a git requirement, so it lands in nimble's pkgcache rather than anywhere nim looks
--- by default. A sibling checkout wins when there is one, which is how it is worked on.
-local function bobabrew_flags()
-  local nimble = os.getenv("NIMBLE_DIR") or (os.getenv("HOME") .. "/.nimble")
-  local candidates = {
-    nimble .. "/pkgcache/githubcom_bresillabobabrew/src",
-    nimble .. "/pkgcache/githubcom_bresillabobabrew_0.1.0/src",
-    "../bobabrew/src",
-  }
-  for _, path in ipairs(candidates) do
-    if oslo.fs.stat(path) then return { "--path:" .. path } end
-  end
-  return {}
-end
-
-local function nim(...)
-  local args = bobabrew_flags()
-  for _, a in ipairs({ ... }) do args[#args + 1] = a end
-  sh.nim(table.unpack(args))
-end
-
 -- Every Nim source this repository owns, which is what the formatter is pointed at.
 local function nim_files()
   local files = {}
@@ -98,7 +77,7 @@ make.recipe{
   name = "build",
   desc = "the release binary",
   run = function()
-    nim("c", "-d:release", "--out:" .. BIN, ENTRY)
+    sh.nim("c", "-d:release", "--out:" .. BIN, ENTRY)
     report()
   end,
 }
@@ -160,7 +139,7 @@ make.recipe{
   desc = "the suite, plus a release compile check",
   deps = { "test" },
   run = function()
-    nim("c", "-d:release", "--out:/tmp/wing-release-check", ENTRY)
+    sh.nim("c", "-d:release", "--out:/tmp/wing-release-check", ENTRY)
     sh.rm("-f", "/tmp/wing-release-check")
   end,
 }
@@ -168,7 +147,7 @@ make.recipe{
 make.recipe{
   name = "check",
   desc = "the Nim semantic checks, without producing a binary",
-  run = function() nim("check", ENTRY) end,
+  run = function() sh.nim("check", ENTRY) end,
 }
 
 make.alias("vet", "check")
