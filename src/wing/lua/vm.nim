@@ -100,3 +100,22 @@ proc hasField*(L: LuaState; tbl: cint; key: string): bool =
   discard lua_getfield(L, at, key.cstring)
   result = lua_type(L, -1) != LuaTNil
   lua_pop(L, 1)
+
+# ------------------------------------------------------------------ calling ----
+
+proc pushStrTable*(L: LuaState; pairs: openArray[(string, string)]) =
+  ## A plain string->string table, which is every context wing hands to a config.
+  lua_createtable(L, 0, pairs.len.cint)
+  for pair in pairs:
+    discard lua_pushlstring(L, pair[1].cstring, pair[1].len.csize_t)
+    lua_setfield(L, -2, pair[0].cstring)
+
+proc callWithContext*(L: LuaState; fnIdx: cint; ctx: openArray[(string, string)];
+                      results: cint): tuple[ok: bool; err: string] =
+  ## Call the function at `fnIdx` with one context table. On success `results` values are left on
+  ## the stack for the caller to read and pop; on failure nothing is.
+  lua_pushvalue(L, fnIdx)
+  pushStrTable(L, ctx)
+  if lua_pcall(L, 1, results, 0) != LuaOk:
+    return (false, popError(L))
+  (true, "")

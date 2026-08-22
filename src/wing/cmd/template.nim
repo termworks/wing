@@ -231,6 +231,17 @@ proc handleTemplate*(argsIn: seq[string]) =
 
     let source = templateSourceForFlavour(found, flavour, hasFlavour)
     let renderedName = effectiveProjectName(projectName, targetPath)
+
+    # What a config sees, both for a computed placeholder and for an apply handler. Established
+    # before the plan is built so a dry run reports the same tokens the real apply would write.
+    let context = @[
+      ("template", templateName),
+      ("flavour", source.flavour),
+      ("name", renderedName),
+      ("path", targetPath)
+    ]
+    setExtraPlaceholders(configPlaceholders(context))
+
     let plan = buildTemplatePlan(source.path, targetPath, renderedName,
         allowSymlinks)
     if dryRun:
@@ -250,6 +261,7 @@ proc handleTemplate*(argsIn: seq[string]) =
     let skippedReplacements = applyTemplate(source.path, targetPath,
         renderedName, force, skipExisting, allowSymlinks)
     printList("Skipped placeholder replacements", skippedReplacements)
+    runConfigApplyHandlers(context)
     let flavourSuffix =
       if source.flavour.len > 0: " (flavour: " & source.flavour & ")"
       else: ""

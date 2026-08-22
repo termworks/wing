@@ -22,12 +22,20 @@ proc hasNul*(content: string): bool =
     if ch == '\0':
       return true
 
+# Tokens a config added, ahead of the built-in ones so a config can replace what a built-in token
+# would otherwise have already consumed. Set once before an apply rather than threaded through
+# every proc that renders a path or a file.
+var extraPlaceholders: seq[(string, string)]
+
+proc setExtraPlaceholders*(pairs: seq[(string, string)]) =
+  extraPlaceholders = pairs
+
 proc placeholderPairs*(projectName: string): seq[(string, string)] =
   let kebab = projectName.replace("_", "-")
   let kebabLower = kebab.toLowerAscii()
   let snake = projectName.replace("-", "_")
   let snakeLower = snake.toLowerAscii()
-  @[
+  extraPlaceholders & @[
     ("{{PROJECT_NAME}}", projectName),
     ("{{project_name}}", projectName),
     ("{{PROJECT-NAME}}", kebab),
