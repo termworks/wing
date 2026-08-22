@@ -24,11 +24,15 @@ local ENTRY = "src/wing.nim"
 local PREFIX = os.getenv("PREFIX") or (os.getenv("HOME") .. "/.local")
 
 -- Every Nim source this repository owns, which is what the formatter is pointed at.
+--
+-- Walked with find, not globbed: oslo's `**` matches a single directory level, so `src/**/*.nim`
+-- silently covered 16 of the 52 files and the formatter gate passed on code it had never read.
 local function nim_files()
+  local found = oslo.run{ "find", "src", "tests", "-type", "f", "-name", "*.nim",
+                          capture = true }
+  assert(found.ok, "could not list the Nim sources")
   local files = {}
-  for _, dir in ipairs({ "src", "tests" }) do
-    for _, path in ipairs(oslo.fs.glob(dir .. "/**/*.nim")) do files[#files + 1] = path end
-  end
+  for path in (found.out or ""):gmatch("[^\n]+") do files[#files + 1] = path end
   table.sort(files)
   return files
 end

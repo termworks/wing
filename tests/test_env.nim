@@ -68,11 +68,11 @@ doAssert cycleRes.output.contains("bins=1"), accMsg
 doAssert cycleRes.output.contains("foo=bar"), cycleRes.output
 let unloadMsg = "unload did not clear FOO: " & cycleRes.output
 doAssert cycleRes.output.contains("UNLOAD foo=unset"), unloadMsg
-doAssert cycleRes.output.contains("bins=0"), "unload left the project bin on PATH: " &
-    cycleRes.output
+let binsMsg = "unload left the project bin on PATH: " & cycleRes.output
+doAssert cycleRes.output.contains("bins=0"), binsMsg
 # The blocked .envrc must not have been applied while unloading the previous one.
-doAssert cycleRes.output.contains("outside=unset"), "blocked .envrc was applied: " &
-    cycleRes.output
+let appliedMsg = "blocked .envrc was applied: " & cycleRes.output
+doAssert cycleRes.output.contains("outside=unset"), appliedMsg
 
 # --- json export parses -----------------------------------------------------
 let jsonOut = run("cd " & quoteShell(proj) & " && WING_DIFF='' " & wing &
