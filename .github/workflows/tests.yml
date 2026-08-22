@@ -2,7 +2,7 @@ name: tests
 
 on:
   push:
-    branches: [ "develop" ]
+    branches: [ "develop", "feat/**" ]
   pull_request:
     branches: [ "develop" ]
 
@@ -12,30 +12,24 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - uses: jiro4989/setup-nim-action@v2
-        with:
-          nim-version: "2.2.4"
-      - name: Cache Nim
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.nimble
-            ~/.cache/nim
-          key: ${{ runner.os }}-nim-${{ hashFiles('wing.nimble') }}
-          restore-keys: |
-            ${{ runner.os }}-nim-
+      # The Nim version is pinned by flake.lock and nothing else. CI enters the flake rather than
+      # installing a Nim of its own, so there is no second pin to drift out from under the
+      # formatter -- and Lua comes from the same place the dev shell gets it.
+      - uses: DeterminateSystems/nix-installer-action@main
       - name: Install dependencies
-        run: nimble install -y --depsOnly
+        run: nix develop .#ci --command nimble install -y --depsOnly
       - name: Format check
         run: |
-          for f in $(find src tests -name '*.nim' | sort); do
-            cp "$f" "/tmp/fmt-$(basename "$f")"
-            nimpretty "/tmp/fmt-$(basename "$f")"
-            cmp -s "$f" "/tmp/fmt-$(basename "$f")" || { echo "nimpretty needed on: $f"; exit 1; }
-          done
+          nix develop .#ci --command bash -c '
+            for f in $(find src tests -type f -name "*.nim" | sort); do
+              cp "$f" "/tmp/fmt-$(basename "$f")"
+              nimpretty "/tmp/fmt-$(basename "$f")"
+              cmp -s "$f" "/tmp/fmt-$(basename "$f")" || {
+                echo "::error file=$f::nimpretty needed on $f"; exit 1; }
+            done'
       - name: Check
-        run: nim check src/wing.nim
+        run: nix develop .#ci --command nim check src/wing.nim
       - name: Test
-        run: nimble test -y
+        run: nix develop .#ci --command nimble test -y
       - name: Build
-        run: nim c -d:release --out:wing src/wing.nim
+        run: nix develop .#ci --command nim c -d:release --out:wing src/wing.nim

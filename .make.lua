@@ -99,20 +99,23 @@ end
 make.recipe{ name = "version", desc = "what this checkout calls itself",
              run = function() print(("%s v%s"):format(NAME, VERSION)) end }
 
--- musl-gcc is deliberately NOT in the dev shell. Adding musl there puts its headers on the
--- default search path, so an ordinary `nim c` compiles against musl and links against glibc --
--- which builds without a word and then segfaults. It is borrowed from nix for this one command.
+-- musl and its Lua are deliberately NOT on the dev shell's search path: headers there make an
+-- ordinary `nim c` compile against musl and link against glibc, which builds without a word and
+-- then segfaults. The flake exports them as paths instead (see its buildEnv), and only this build
+-- is given them.
+--
+-- WING_LUA goes through `env` rather than the recipe's own environment so it reaches this compile
+-- and nothing after it: a test compiled against musl's Lua and linked to glibc is that same bug.
 local function nim_musl()
-  local args = { "c", "-d:release",
-                 "--gcc.exe:musl-gcc", "--gcc.linkerexe:musl-gcc", "--passL:-static",
-                 "--out:" .. BIN, ENTRY }
-  if oslo.run{ "sh", "-c", "command -v musl-gcc", capture = true }.ok then
-    sh.nim(table.unpack(args))
-  else
-    assert(oslo.run{ "sh", "-c", "command -v nix", capture = true }.ok,
-           "the static build needs musl-gcc: install musl-tools, or install nix to borrow one")
-    sh.nix("shell", "nixpkgs#musl.dev", "--command", "nim", table.unpack(args))
-  end
+  local musl = os.getenv("MUSL_DEV") or ""
+  local lua = os.getenv("LUA_MUSL") or ""
+  assert(musl ~= "" and lua ~= "",
+         "the static build needs MUSL_DEV and LUA_MUSL from the dev shell: nix develop .#ci")
+  sh.env("WING_LUA=" .. lua, "nim", "c", "-d:release",
+         "--gcc.exe:" .. musl .. "/bin/musl-gcc",
+         "--gcc.linkerexe:" .. musl .. "/bin/musl-gcc",
+         "--passL:-static",
+         "--out:" .. BIN, ENTRY)
 end
 
 -- The one that gets installed and shipped, and what `make build` means. It refuses to finish
