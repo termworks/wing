@@ -74,7 +74,9 @@ wing template apply basic /tmp/my-app --name my_app --dry-run
 wing template apply nim /tmp/my-nim-tool --name my_nim_tool
 wing template apply rust /tmp/my-rust-lib --name my_rust_lib
 wing template apply cpp /tmp/my-cpp-lib --name my_cpp_lib
-wing template apply c /tmp/my-c-lib --name my_c_lib --flavour xmake
+wing template apply c /tmp/my-c-lib --name my_c_lib --flavour cmake
+wing template apply v /tmp/my-v-tool --name my_v_tool
+wing template apply d /tmp/my-d-tool --name my_d_tool
 wing template apply python /tmp/my-python-tool --name my_python_tool
 wing template apply python /tmp/my-uv-tool --name my_uv_tool --flavour uv
 wing template apply python /tmp/my-pixi-tool --name my_pixi_tool --flavour pixi

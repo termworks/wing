@@ -7,13 +7,22 @@ local wing = require("wing")
 -- zig-as-compiler and does not drive a host gcc or clang -- which is exactly the choice this
 -- template exists to give. Zig stays the build system for Zig.
 wing.template("c", {
-  description = "C library starter with CMake or xmake, flake.nix, tests, and release hooks",
+  description = "C library starter with xmake or CMake, flake.nix, tests, and release hooks",
   language = "c",
   framework = "library",
   tags = { "builtin", "c", "library" },
-  default_flavour = "cmake",
+  default_flavour = "xmake",
 
   flavours = {
+    {
+      name = "xmake",
+      nix_packages = [[
+            pkgs.xmake
+            pkgs.gcc
+            pkgs.clang-tools
+            pkgs.gdb]],
+      environment = "xmake drives the build. `make config --toolchain clang` switches compiler, and xmake resolves packages itself.",
+    },
     {
       name = "cmake",
       nix_packages = [[
@@ -23,15 +32,6 @@ wing.template("c", {
             pkgs.clang-tools
             pkgs.gdb]],
       environment = "CMake drives the build. `make config --toolchain clang` switches compiler; Ninja is used when present.",
-    },
-    {
-      name = "xmake",
-      nix_packages = [[
-            pkgs.xmake
-            pkgs.gcc
-            pkgs.clang-tools
-            pkgs.gdb]],
-      environment = "xmake drives the build. `make config --toolchain clang` switches compiler, and xmake resolves packages itself.",
     },
   },
 })

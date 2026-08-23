@@ -104,6 +104,8 @@ doAssert builtins.contains("nim\tnim\t")
 doAssert builtins.contains("rust\trust\t")
 doAssert builtins.contains("cpp\tcpp\t")
 doAssert builtins.contains("c\tc\t")
+doAssert builtins.contains("v\tv\t")
+doAssert builtins.contains("d\td\t")
 doAssert builtins.contains("python\tpython\t")
 let builtinDisplay = checked(wing & "template builtins list")
 doAssert builtinDisplay.contains("nix (default), uv, pixi, micromamba")
@@ -145,51 +147,76 @@ doAssert readFile(rustTarget / "examples" / "main.rs").contains(
     "sample_app::name()")
 doAssert readFile(rustTarget / "flake.nix").contains("pkgs.cargo")
 
-# C++ defaults to the cmake flavour: the sources come from base/, the build file from the flavour.
+# C++ defaults to the xmake flavour: the sources come from base/, the build file from the flavour.
 let cppTarget = "/tmp/wing-templates-builtin-cpp"
 removeDir(cppTarget)
 discard checked(wing & "template apply cpp " & quoteShell(cppTarget) &
     " --name sample_app")
-doAssert fileExists(cppTarget / "CMakeLists.txt")
+doAssert fileExists(cppTarget / "xmake.lua")
+doAssert not fileExists(cppTarget / "CMakeLists.txt")
 doAssert fileExists(cppTarget / "include" / "sample_app" / "sample_app.hpp")
 doAssert fileExists(cppTarget / "src" / "sample_app" / "sample_app.cpp")
 doAssert fileExists(cppTarget / "test" / "basic_test.cpp")
-doAssert readFile(cppTarget / "CMakeLists.txt").contains(
-    "src/sample_app/sample_app.cpp")
-doAssert readFile(cppTarget / "flake.nix").contains("pkgs.cmake")
-doAssert not fileExists(cppTarget / "xmake.lua")
+doAssert readFile(cppTarget / "flake.nix").contains("pkgs.xmake")
 # .make.lua drives the build system; it is not the build system.
-doAssert readFile(cppTarget / ".make.lua").contains("sh.cmake(")
+doAssert readFile(cppTarget / ".make.lua").contains("sh.xmake(")
 
-# The xmake flavour swaps the build file and the dev shell, and nothing else.
-let cppXmakeTarget = "/tmp/wing-templates-builtin-cpp-xmake"
-removeDir(cppXmakeTarget)
-discard checked(wing & "template apply cpp " & quoteShell(cppXmakeTarget) &
-    " --name sample_app --flavour xmake")
-doAssert fileExists(cppXmakeTarget / "xmake.lua")
-doAssert not fileExists(cppXmakeTarget / "CMakeLists.txt")
-doAssert fileExists(cppXmakeTarget / "src" / "sample_app" / "sample_app.cpp")
-doAssert readFile(cppXmakeTarget / "flake.nix").contains("pkgs.xmake")
-doAssert readFile(cppXmakeTarget / ".make.lua").contains("sh.xmake(")
+# The cmake flavour swaps the build file and the dev shell, and nothing else.
+let cppCmakeTarget = "/tmp/wing-templates-builtin-cpp-cmake"
+removeDir(cppCmakeTarget)
+discard checked(wing & "template apply cpp " & quoteShell(cppCmakeTarget) &
+    " --name sample_app --flavour cmake")
+doAssert fileExists(cppCmakeTarget / "CMakeLists.txt")
+doAssert not fileExists(cppCmakeTarget / "xmake.lua")
+doAssert fileExists(cppCmakeTarget / "src" / "sample_app" / "sample_app.cpp")
+doAssert readFile(cppCmakeTarget / "CMakeLists.txt").contains(
+    "src/sample_app/sample_app.cpp")
+doAssert readFile(cppCmakeTarget / "flake.nix").contains("pkgs.cmake")
+doAssert readFile(cppCmakeTarget / ".make.lua").contains("sh.cmake(")
 
 # C is the same pair of build systems over C sources.
 let cTarget = "/tmp/wing-templates-builtin-c"
 removeDir(cTarget)
 discard checked(wing & "template apply c " & quoteShell(cTarget) &
     " --name sample_app")
-doAssert fileExists(cTarget / "CMakeLists.txt")
+doAssert fileExists(cTarget / "xmake.lua")
+doAssert readFile(cTarget / "xmake.lua").contains("set_languages(\"c17\")")
 doAssert fileExists(cTarget / "include" / "sample_app" / "sample_app.h")
 doAssert fileExists(cTarget / "src" / "sample_app.c")
 doAssert fileExists(cTarget / "test" / "basic_test.c")
-doAssert readFile(cTarget / "flake.nix").contains("pkgs.cmake")
+doAssert readFile(cTarget / "flake.nix").contains("pkgs.xmake")
 
-let cXmakeTarget = "/tmp/wing-templates-builtin-c-xmake"
-removeDir(cXmakeTarget)
-discard checked(wing & "template apply c " & quoteShell(cXmakeTarget) &
-    " --name sample_app --flavour xmake")
-doAssert fileExists(cXmakeTarget / "xmake.lua")
-doAssert readFile(cXmakeTarget / "xmake.lua").contains("set_languages(\"c17\")")
-doAssert readFile(cXmakeTarget / "flake.nix").contains("pkgs.xmake")
+let cCmakeTarget = "/tmp/wing-templates-builtin-c-cmake"
+removeDir(cCmakeTarget)
+discard checked(wing & "template apply c " & quoteShell(cCmakeTarget) &
+    " --name sample_app --flavour cmake")
+doAssert fileExists(cCmakeTarget / "CMakeLists.txt")
+doAssert readFile(cCmakeTarget / "flake.nix").contains("pkgs.cmake")
+
+# V is its own compiler and build system, so it has no flavour to choose.
+let vTarget = "/tmp/wing-templates-builtin-v"
+removeDir(vTarget)
+discard checked(wing & "template apply v " & quoteShell(vTarget) &
+    " --name sample_app")
+doAssert fileExists(vTarget / "v.mod")
+doAssert fileExists(vTarget / "src" / "main.v")
+doAssert fileExists(vTarget / "src" / "main_test.v")
+doAssert readFile(vTarget / "v.mod").contains("name: 'sample_app'")
+doAssert readFile(vTarget / "flake.nix").contains("pkgs.vlang")
+doAssert readFile(vTarget / ".make.lua").contains("sh.v(")
+
+# D builds with dub; the compiler is a choice rather than a flavour.
+let dTarget = "/tmp/wing-templates-builtin-d"
+removeDir(dTarget)
+discard checked(wing & "template apply d " & quoteShell(dTarget) &
+    " --name sample_app")
+doAssert fileExists(dTarget / "dub.json")
+doAssert fileExists(dTarget / "source" / "app.d")
+doAssert fileExists(dTarget / "source" / "sample_app" / "core.d")
+doAssert readFile(dTarget / "dub.json").contains("\"name\": \"sample_app\"")
+doAssert readFile(dTarget / "flake.nix").contains("pkgs.dub")
+doAssert readFile(dTarget / ".make.lua").contains("sh.dub(")
+doAssert readFile(dTarget / ".make.lua").contains("ldc2, dmd or gdc")
 
 # Zig is a build system as well as a language, but only for Zig: it is not a C or C++ flavour.
 let cppZig = run(wing & "template apply cpp /tmp/wing-cpp-zig --name x --flavour zig")
@@ -269,7 +296,7 @@ let initPrefix = "XDG_DATA_HOME=" & quoteShell(initDataHome) & " HOME=" &
 # reach rather than writing one out. Here that is the repository's own templates/, via the cwd.
 let initOutput = checked(initPrefix & quoteShell(Binary) & " init")
 doAssert initOutput.contains("Initialized wing data")
-doAssert initOutput.contains("Declared: 7"), initOutput
+doAssert initOutput.contains("Declared: 9"), initOutput
 
 # A reachable tree that declares nothing is reported, not treated as a failure.
 let emptyRoot = "/tmp/wing-init-empty-templates"

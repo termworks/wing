@@ -64,10 +64,15 @@ recipes.
 
 | template | build system | flavours |
 |---|---|---|
-| c, cpp | CMake or xmake | `cmake` (default), `xmake` |
+| c, cpp | xmake or CMake | `xmake` (default), `cmake` |
 | zig | zig | — |
+| v | v | — |
+| d | dub | — |
 | go, nim, rust | the language's own tool | — |
 | python | pyproject | `nix` (default), `uv`, `pixi`, `micromamba` |
+
+Where the build system is fixed but the compiler is not, the compiler is a flag rather than a
+flavour: `make build --compiler dmd` for D, `make config --toolchain clang` for C and C++.
 
 For C and C++ the flavour picks the build system and the compiler is chosen at configure time:
 
