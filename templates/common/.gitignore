@@ -24,7 +24,8 @@ compile_commands.json
 .complog
 .quickfix
 
-# Working notes for coding agents, not part of the project
+# Working notes for coding agents: scratch context, not part of the project.
+# These files are deliberately ignored -- do not put them back.
 AGENTS.md
 PLAN*.md
 plans/
