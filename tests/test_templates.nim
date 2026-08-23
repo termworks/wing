@@ -540,6 +540,13 @@ else:
       " rev-parse --abbrev-ref HEAD").output.strip()
   doAssert branch == "develop", "a new project should start on develop, not " & branch
 
+# Tracked, not merely written. A flake only sees files git knows about, so in a repository where
+# nothing is tracked `nix develop` fails on flake.nix -- and every generated project brings up its
+# dev shell from .env.lua. This is why the repository is not left empty.
+doAssert execCmdEx("git -C " & quoteShell(repoTarget) &
+    " ls-files flake.nix").output.strip() == "flake.nix",
+    "flake.nix has to be tracked or the dev shell cannot come up"
+
 # --no-git leaves it alone, for generating into something that is not a project of its own.
 let bareTarget = "/tmp/wing-templates-repo-none"
 removeDir(bareTarget)

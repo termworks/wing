@@ -81,10 +81,14 @@ recipes.
 
 ### A generated project is a repository
 
-`wing template apply` finishes by running `git init` and `git flow init -d --preset=classic`, so a
-new project starts on `develop` with `main` beside it and the `feature/`, `release/` and `hotfix/`
-prefixes configured. The recipes assume this: `make release` runs `git-rel`, which refuses to run
-anywhere but `develop`.
+`wing template apply` finishes by running `git init`, staging what it wrote, and `git flow init -d
+--preset=classic`, so a new project starts on `develop` with `main` beside it, the `feature/`,
+`release/` and `hotfix/` prefixes configured, and one commit holding the generated files. The
+recipes assume this: `make release` runs `git-rel`, which refuses to run anywhere but `develop`.
+
+Staging is not a nicety. A flake only sees files git knows about, so a repository where nothing is
+tracked answers `nix develop` with `Path 'flake.nix' ... is not tracked by Git` — and `.env.lua`
+brings that shell up on every `cd`.
 
 Three cases leave it alone, each saying so on the last line of the apply:
 

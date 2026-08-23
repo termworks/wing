@@ -46,6 +46,15 @@ proc setupRepository*(path: string): RepoSetup =
     return RepoSetup(note: "git init failed: " & created.output.strip())
   result = RepoSetup(initialized: true)
 
+  # Staged straight away, and this is not a nicety: a flake only sees files git knows about, so
+  # inside a repository where nothing is tracked, `nix develop` fails with "Path 'flake.nix' ... is
+  # not tracked by Git" -- and every one of these projects brings up its dev shell from `.env.lua`.
+  # Staging also means git-flow's first commit is the generated project rather than an empty tree.
+  let staged = runIn("git", @["add", "-A"], path)
+  if not staged.ok:
+    result.note = "git add failed: " & staged.output.strip()
+    return
+
   if findExe("git-flow").len == 0:
     result.note = "git-flow is not on PATH, so main and develop were not created"
     return
