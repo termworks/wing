@@ -1,16 +1,16 @@
 local wing = require("wing")
 
--- Two build systems, one set of sources. The flavour decides which build file the project gets and
--- which tools the dev shell brings; the sources in base/ do not know or care which one built them.
+-- The same two build systems the C++ template offers, over C sources. gcc and clang are the
+-- compilers; the flavour is the build system, and `make config --toolchain clang` is the compiler.
 --
--- Zig is deliberately not a flavour here. It can compile C and C++, but its build system assumes
--- zig-as-compiler, and driving a host gcc or clang toolchain is not something it does -- which is
--- the whole point of offering a choice of compiler. Zig stays the build system for Zig.
-wing.template("cpp", {
-  description = "C++ library starter with CMake or xmake, flake.nix, tests, and release hooks",
-  language = "cpp",
+-- Zig is deliberately not a flavour. It compiles C perfectly well, but its build system assumes
+-- zig-as-compiler and does not drive a host gcc or clang -- which is exactly the choice this
+-- template exists to give. Zig stays the build system for Zig.
+wing.template("c", {
+  description = "C library starter with CMake or xmake, flake.nix, tests, and release hooks",
+  language = "c",
   framework = "library",
-  tags = { "builtin", "cpp", "library" },
+  tags = { "builtin", "c", "library" },
   default_flavour = "cmake",
 
   flavours = {

@@ -53,23 +53,13 @@ make.recipe{
 
 ---------------------------------------------------------------------------- go
 
--- Version, commit and build date are compiled in, so `--version` on a shipped binary answers with
--- the commit it was built from rather than a number someone typed twice.
-local function ldflags()
-  local commit = oslo.run{ "git", "rev-parse", "--short", "HEAD", capture = true }
-  local stamp = oslo.run{ "date", "-u", "+%Y-%m-%dT%H:%M:%SZ", capture = true }
-  local trim = function(r) return ((r.out or ""):gsub("%s+$", "")) end
-  return table.concat({
-    "-s", "-w",
-    "-X main.version=" .. VERSION,
-    "-X main.commit=" .. trim(commit),
-    "-X main.date=" .. trim(stamp),
-    "-X main.builtBy=make",
-  }, " ")
-end
+-- `go build` is the build system; these recipes only drive it. The version is passed through from
+-- PROJECT because Go has nowhere else to read it from -- everything else about how this compiles
+-- is go's own business, and belongs in go.mod and the source, not here.
+local LDFLAGS = "-s -w -X main.version=" .. VERSION
 
 make.recipe{ name = "build", desc = "the binary",
-             run = function() sh.go("build", "-ldflags", ldflags(), "-o", NAME, "./src") end }
+             run = function() sh.go("build", "-ldflags", LDFLAGS, "-o", NAME, "./src") end }
 make.alias("b", "build")
 
 make.recipe{

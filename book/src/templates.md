@@ -55,6 +55,31 @@ provides `make setup`; the `uv`, `pixi`, and `micromamba` flavours create their
 respective local environments only when that recipe, or one that depends on it,
 is run.
 
+## Build systems
+
+`.make.lua` is a task runner, not a build system. It runs the commands of whatever build system the
+project uses, so `make build` means `cmake --build` or `xmake build` or `go build` depending on the
+template — and everything about *how* the project compiles lives in the build file, not in the
+recipes.
+
+| template | build system | flavours |
+|---|---|---|
+| c, cpp | CMake or xmake | `cmake` (default), `xmake` |
+| zig | zig | — |
+| go, nim, rust | the language's own tool | — |
+| python | pyproject | `nix` (default), `uv`, `pixi`, `micromamba` |
+
+For C and C++ the flavour picks the build system and the compiler is chosen at configure time:
+
+```sh
+make config --toolchain clang     # or gcc
+make build
+```
+
+Zig is not offered as a C or C++ flavour. It compiles both perfectly well, but its build system
+assumes zig-as-compiler and does not drive a host gcc or clang, which is the choice these templates
+exist to give. Zig remains the build system for Zig.
+
 Template placeholders are replaced in both file contents and file names, so
 `{{snake_name}}.nimble` becomes `my_nim_tool.nimble`.
 

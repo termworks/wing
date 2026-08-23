@@ -103,6 +103,7 @@ doAssert builtins.contains("zig\tzig\t")
 doAssert builtins.contains("nim\tnim\t")
 doAssert builtins.contains("rust\trust\t")
 doAssert builtins.contains("cpp\tcpp\t")
+doAssert builtins.contains("c\tc\t")
 doAssert builtins.contains("python\tpython\t")
 let builtinDisplay = checked(wing & "template builtins list")
 doAssert builtinDisplay.contains("nix (default), uv, pixi, micromamba")
@@ -144,6 +145,7 @@ doAssert readFile(rustTarget / "examples" / "main.rs").contains(
     "sample_app::name()")
 doAssert readFile(rustTarget / "flake.nix").contains("pkgs.cargo")
 
+# C++ defaults to the cmake flavour: the sources come from base/, the build file from the flavour.
 let cppTarget = "/tmp/wing-templates-builtin-cpp"
 removeDir(cppTarget)
 discard checked(wing & "template apply cpp " & quoteShell(cppTarget) &
@@ -155,6 +157,44 @@ doAssert fileExists(cppTarget / "test" / "basic_test.cpp")
 doAssert readFile(cppTarget / "CMakeLists.txt").contains(
     "src/sample_app/sample_app.cpp")
 doAssert readFile(cppTarget / "flake.nix").contains("pkgs.cmake")
+doAssert not fileExists(cppTarget / "xmake.lua")
+# .make.lua drives the build system; it is not the build system.
+doAssert readFile(cppTarget / ".make.lua").contains("sh.cmake(")
+
+# The xmake flavour swaps the build file and the dev shell, and nothing else.
+let cppXmakeTarget = "/tmp/wing-templates-builtin-cpp-xmake"
+removeDir(cppXmakeTarget)
+discard checked(wing & "template apply cpp " & quoteShell(cppXmakeTarget) &
+    " --name sample_app --flavour xmake")
+doAssert fileExists(cppXmakeTarget / "xmake.lua")
+doAssert not fileExists(cppXmakeTarget / "CMakeLists.txt")
+doAssert fileExists(cppXmakeTarget / "src" / "sample_app" / "sample_app.cpp")
+doAssert readFile(cppXmakeTarget / "flake.nix").contains("pkgs.xmake")
+doAssert readFile(cppXmakeTarget / ".make.lua").contains("sh.xmake(")
+
+# C is the same pair of build systems over C sources.
+let cTarget = "/tmp/wing-templates-builtin-c"
+removeDir(cTarget)
+discard checked(wing & "template apply c " & quoteShell(cTarget) &
+    " --name sample_app")
+doAssert fileExists(cTarget / "CMakeLists.txt")
+doAssert fileExists(cTarget / "include" / "sample_app" / "sample_app.h")
+doAssert fileExists(cTarget / "src" / "sample_app.c")
+doAssert fileExists(cTarget / "test" / "basic_test.c")
+doAssert readFile(cTarget / "flake.nix").contains("pkgs.cmake")
+
+let cXmakeTarget = "/tmp/wing-templates-builtin-c-xmake"
+removeDir(cXmakeTarget)
+discard checked(wing & "template apply c " & quoteShell(cXmakeTarget) &
+    " --name sample_app --flavour xmake")
+doAssert fileExists(cXmakeTarget / "xmake.lua")
+doAssert readFile(cXmakeTarget / "xmake.lua").contains("set_languages(\"c17\")")
+doAssert readFile(cXmakeTarget / "flake.nix").contains("pkgs.xmake")
+
+# Zig is a build system as well as a language, but only for Zig: it is not a C or C++ flavour.
+let cppZig = run(wing & "template apply cpp /tmp/wing-cpp-zig --name x --flavour zig")
+doAssert cppZig.code != 0
+doAssert cppZig.output.contains("Unknown flavour"), cppZig.output
 
 let pythonTarget = "/tmp/wing-templates-builtin-python"
 removeDir(pythonTarget)
@@ -229,7 +269,7 @@ let initPrefix = "XDG_DATA_HOME=" & quoteShell(initDataHome) & " HOME=" &
 # reach rather than writing one out. Here that is the repository's own templates/, via the cwd.
 let initOutput = checked(initPrefix & quoteShell(Binary) & " init")
 doAssert initOutput.contains("Initialized wing data")
-doAssert initOutput.contains("Declared: 6"), initOutput
+doAssert initOutput.contains("Declared: 7"), initOutput
 
 # A reachable tree that declares nothing is reported, not treated as a failure.
 let emptyRoot = "/tmp/wing-init-empty-templates"
