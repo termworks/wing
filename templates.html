@@ -208,10 +208,25 @@ recipes.</p>
 <tr><td>d</td><td>dub</td><td>—</td></tr>
 <tr><td>haskell</td><td>cabal</td><td>—</td></tr>
 <tr><td>crystal</td><td>crystal + shards</td><td>—</td></tr>
+<tr><td>carbon</td><td>carbon</td><td>—</td></tr>
+<tr><td>mojo</td><td>mojo</td><td>—</td></tr>
 <tr><td>go, nim, rust</td><td>the language's own tool</td><td>—</td></tr>
 <tr><td>python</td><td>pyproject</td><td><code>nix</code> (default), <code>uv</code>, <code>pixi</code>, <code>micromamba</code></td></tr>
 </tbody></table>
 </div>
+<h3 id="carbon-and-mojo-bring-their-own-compiler"><a class="header" href="#carbon-and-mojo-bring-their-own-compiler">Carbon and Mojo bring their own compiler</a></h3>
+<p>Neither is in nixpkgs, and neither can be installed from a distribution's package manager: Carbon
+publishes prebuilt nightlies and nothing else, and Mojo is a closed-source conda package under
+Modular's own licence. So the template declares the derivation that unpacks one, and the flake it
+generates <em>is</em> how you get a toolchain. Without nix these two templates produce a project you
+cannot build, which is what their <code>init.lua</code> warns about at generation time.</p>
+<p>That derivation is pinned to an exact version and hash, because nix cannot express "whatever is
+newest" — <code>fetchurl</code> needs the hash before it fetches. For Carbon, whose only releases are
+nightlies, moving the pin is therefore a command rather than a default:</p>
+<pre><code class="language-sh">make toolchain      # read the newest nightly, hash it, rewrite the two lines in flake.nix
+</code></pre>
+<p>It rewrites the generated project's own <code>flake.nix</code>, so a checkout keeps building against the
+toolchain it was written for until somebody decides otherwise.</p>
 <p>Where the build system is fixed but the compiler is not, the compiler is a flag rather than a
 flavour: <code>make build --compiler dmd</code> for D, <code>make config --toolchain gcc</code> for C and C++.</p>
 <h3 id="c-and-c-are-static-against-musl-by-default"><a class="header" href="#c-and-c-are-static-against-musl-by-default">C and C++ are static against musl by default</a></h3>
