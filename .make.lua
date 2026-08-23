@@ -269,36 +269,45 @@ make.recipe{
 -- is a symlink into a dotfiles repo gets the files there, and someone with an ordinary directory
 -- gets them there. Neither case needs to be detected.
 make.recipe{
-  name = "templates",
-  desc = "sync the templates into $XDG_CONFIG_HOME/wing/templates",
+  name = "configs",
+  desc = "install config/ into $XDG_CONFIG_HOME/wing",
   params = { { "--dest", desc = "somewhere other than the config directory" } },
   run = function(a)
     assert(oslo.run{ "sh", "-c", "command -v rsync", capture = true }.ok,
            "rsync is not installed; install it first")
+    -- Asked of git rather than assumed from the working directory, so this works from anywhere in
+    -- the tree. Outside a repository, where the command was run is the best answer available.
+    local top = oslo.run{ "git", "rev-parse", "--show-toplevel", capture = true }
+    local root = top.ok and (top.out or ""):match("^%s*(.-)%s*$") or ""
+    if root == "" then root = oslo.sys.pwd() end
+    local source = root .. "/config"
+    assert(oslo.fs.stat(source .. "/"), "there is no config/ directory in " .. root)
 
     local dest = a.dest
     if not dest then
       local config = os.getenv("XDG_CONFIG_HOME")
       if not config or config == "" then config = os.getenv("HOME") .. "/.config" end
-      dest = config .. "/wing/templates"
+      dest = config .. "/wing"
     end
     sh.mkdir("-p", dest)
 
-    -- One template at a time, each mirrored with --delete, rather than one --delete over the whole
-    -- tree. The destination is also where a user keeps templates of their own, and a tree-wide
-    -- mirror would delete every one of them.
+    -- One entry at a time, each mirrored with --delete, rather than one --delete over the whole
+    -- tree. The destination is also where a user keeps their own init.lua and templates of their
+    -- own, and a tree-wide mirror would delete every one of them.
     local synced = 0
-    for _, path in ipairs(oslo.fs.glob("templates/*")) do
+    for _, path in ipairs(oslo.fs.glob(source .. "/*")) do
+      local name = oslo.path.name(path)
       if oslo.fs.stat(path .. "/") then
-        local name = oslo.path.name(path)
         sh.mkdir("-p", dest .. "/" .. name)
         sh.rsync("-a", "--delete", path .. "/", dest .. "/" .. name .. "/")
-        synced = synced + 1
+      else
+        sh.rsync("-a", path, dest .. "/" .. name)
       end
+      synced = synced + 1
     end
 
     print(oslo.ui.style("✓ ", { fg = "green" }) ..
-          ("%d template(s) -> %s"):format(synced, dest))
+          ("%d entr%s -> %s"):format(synced, synced == 1 and "y" or "ies", dest))
     print(dim("  anything else in that directory is left alone"))
   end,
 }

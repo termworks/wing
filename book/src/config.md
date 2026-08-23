@@ -15,11 +15,12 @@ returns nothing — wing reads the tables back once every chunk has run.
 | `$XDG_CONFIG_HOME/wing/init.lua` | your config: settings, overrides, placeholders, hooks |
 
 Templates are **not** carried inside the binary — a fresh install has none until a tree is
-reachable. From a wing checkout, `make templates` puts them where wing will find them:
+reachable. A wing checkout keeps everything that belongs in the config directory under `config/`,
+and `make configs` installs it — `config/*` becomes `~/.config/wing/*`:
 
 ```sh
-make templates                 # -> $XDG_CONFIG_HOME/wing/templates
-make templates --dest=/opt/wing/templates
+make configs                   # config/ -> $XDG_CONFIG_HOME/wing
+make configs --dest=/opt/wing
 ```
 
 It mirrors each bundled template individually, so a template of your own sitting in that directory

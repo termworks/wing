@@ -312,7 +312,7 @@ createDir(initHome)
 let initPrefix = "XDG_DATA_HOME=" & quoteShell(initDataHome) & " HOME=" &
     quoteShell(initHome) & " "
 # Templates are not carried inside the binary any more, so init registers whatever tree it can
-# reach rather than writing one out. Here that is the repository's own templates/, via the cwd.
+# reach rather than writing one out. Here that is the repository's own config/templates/, via the cwd.
 let initOutput = checked(initPrefix & quoteShell(Binary) & " init")
 doAssert initOutput.contains("Initialized wing data")
 doAssert initOutput.contains("Declared: 17"), initOutput
@@ -374,7 +374,7 @@ doAssert missing.code != 0
 # nix produces a project whose dev shell cannot come up. The template is what knows that.
 for name in ["c", "c3", "carbon", "cpp", "crystal", "d", "go", "haskell", "mojo",
              "nim", "ocaml", "odin", "python", "rust", "v", "vala", "zig"]:
-  let logic = "templates" / name / "init.lua"
+  let logic = "config" / "templates" / name / "init.lua"
   doAssert fileExists(logic), name & " should carry an init.lua: " & logic
   doAssert readFile(logic).contains("wing.on.check"),
       name & "'s init.lua should register a check"
@@ -500,12 +500,12 @@ doAssert mojoFlake.contains("MODULAR_HOME"),
 # language's own manifest, and a file invented here would be one more copy for nothing to update.
 for name in ["c", "c3", "carbon", "cpp", "crystal", "d", "go", "haskell", "mojo",
              "nim", "ocaml", "odin", "python", "rust", "v", "vala", "zig"]:
-  doAssert not fileExists("templates" / name / "PROJECT"),
+  doAssert not fileExists("config" / "templates" / name / "PROJECT"),
       name & " should not carry a PROJECT file"
-doAssert not fileExists("templates" / "common" / "PROJECT"),
+doAssert not fileExists("config" / "templates" / "common" / "PROJECT"),
     "the shared base should not carry a PROJECT file either"
 
-for recipes in walkDirRec("templates"):
+for recipes in walkDirRec("config" / "templates"):
   if recipes.extractFilename != ".make.lua":
     continue
   let text = readFile(recipes)
@@ -584,7 +584,7 @@ doAssert not licence.contains("{{"), "the licence should have no placeholders le
 # template whose release workflow only compiles publishes nothing, which is how a tag ends up with
 # no binary behind it.
 var releaseWorkflows = 0
-for workflow in walkDirRec("templates"):
+for workflow in walkDirRec("config" / "templates"):
   if workflow.extractFilename != "release.yml":
     continue
   releaseWorkflows.inc
@@ -600,3 +600,14 @@ for workflow in walkDirRec("templates"):
       workflow & " should not wait for a release to be made by hand"
 doAssert releaseWorkflows == 22,
     "every template and flavour needs a release workflow, found " & $releaseWorkflows
+
+# --- every template can install a project's own configuration -----------------
+# One convention: `config/` in a checkout becomes `~/.config/<project>/`. wing installs its own
+# templates that way too, which is why they live in config/templates rather than at the top.
+for recipes in walkDirRec("config" / "templates"):
+  if recipes.extractFilename != ".make.lua":
+    continue
+  let text = readFile(recipes)
+  doAssert text.contains("name = \"configs\""), recipes & " should have a configs recipe"
+  doAssert text.contains("rev-parse"),
+      recipes & "'s configs recipe should find the project root rather than assume the cwd"

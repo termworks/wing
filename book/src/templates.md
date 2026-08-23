@@ -79,6 +79,20 @@ recipes.
 | go, nim, rust | the language's own tool | — |
 | python | pyproject | `nix` (default), `uv`, `pixi`, `micromamba` |
 
+### A project's own configuration
+
+Every generated project gets a `make configs` recipe. If the checkout has a `config/` directory, its
+contents are installed into `~/.config/<project>/` — `config/init.lua` becomes
+`~/.config/myapp/init.lua`, `config/themes/` becomes `~/.config/myapp/themes/`. A project with no
+`config/` says so and stops; most have none.
+
+The `config/` it installs is the one at the top of the checkout — asked of git, not assumed from
+the working directory — so it works from any directory in the tree. Each entry is mirrored on its
+own, so files you added to the destination yourself are left alone.
+
+wing installs its own templates the same way: they live in `config/templates/` in the checkout, and
+`make configs` puts them in `~/.config/wing/templates/`.
+
 ### Releasing
 
 Every template ships the same `.github/workflows/release.yml`, and it is the same one in every
