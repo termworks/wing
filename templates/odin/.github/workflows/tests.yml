@@ -17,5 +17,6 @@ jobs:
       # The generated project has no oslo, so CI runs the same commands .make.lua would.
       - name: Verify
         run: |
-          nix develop --impure --command bash -c n          odin check src
-          odin test src
+          nix develop --impure --command bash -c '
+          odin check src
+          odin test src'

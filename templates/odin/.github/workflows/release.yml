@@ -15,5 +15,6 @@ jobs:
       - uses: cachix/install-nix-action@v31
       - name: Build
         run: |
-          nix develop --impure --command bash -c n          mkdir -p target
-          odin build src -out:target/{{kebab_name}} -o:speed
+          nix develop --impure --command bash -c '
+          mkdir -p target
+          odin build src -out:target/{{kebab_name}} -o:speed'

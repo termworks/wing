@@ -17,7 +17,8 @@ jobs:
       # The generated project has no oslo, so CI runs the same commands .make.lua would.
       - name: Verify
         run: |
-          nix develop --impure --command bash -c n          cabal update
-          ormolu --mode check $(find app src test -name '*.hs')
+          nix develop --impure --command bash -c '
+          cabal update
+          ormolu --mode check $(find app src test -name "*.hs")
           hlint app src test
-          cabal test
+          cabal test'
