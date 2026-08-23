@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.7.0] - 2026-08-23
+
+### <!-- 0 -->⛰️  Features
+
+- Give every bundled template logic of its own
+- Install templates from git, and give them logic
+
+### <!-- 1 -->🐛 Bug Fixes
+
+- Stop release tooling rewriting the v template version
+
 ## [0.6.0] - 2026-08-23
 
 ### <!-- 0 -->⛰️  Features
