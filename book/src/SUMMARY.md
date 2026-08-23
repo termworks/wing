@@ -6,6 +6,7 @@
 - [Machines](./machines.md)
 - [Templates](./templates.md)
 - [Configuration](./config.md)
+- [Templates as plugins](./plugins.md)
 - [Environment](./env.md)
 - [Sync](./sync.md)
 - [TUI](./tui.md)

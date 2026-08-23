@@ -13,6 +13,7 @@ local wing = {}
 -- override a bundled template instead of ending up with two of them.
 wing.templates = {}
 wing.__root = ""
+wing.__owner = ""
 
 function wing.template(name, spec)
   if type(name) ~= "string" or name == "" then
@@ -43,6 +44,39 @@ function wing.on.apply(handler)
     error("wing.on.apply requires a function", 2)
   end
   wing.on._apply[#wing.on._apply + 1] = handler
+end
+
+-- Logic a template brings with it, registered from its own init.lua. `wing.__owner` is set by the
+-- host to the template whose file is being read, so a hook lands on that template alone. Registered
+-- from a user config there is no owner, and the hook applies to every template -- one rule, and it
+-- reads the same in both places.
+wing.checks = {}
+wing.filters = {}
+
+local function scope()
+  return wing.__owner or ""
+end
+
+local function append(into, handler, what)
+  if type(handler) ~= "function" then
+    error("wing.on." .. what .. " requires a function", 3)
+  end
+  local key = scope()
+  into[key] = into[key] or {}
+  into[key][#into[key] + 1] = handler
+end
+
+-- Runs before a template writes anything. Return `{ refuse = "why" }` to stop the apply; return
+-- nothing to let it continue. Warning and carrying on is the common case, which is why saying
+-- nothing is what happens by default.
+function wing.on.check(handler)
+  append(wing.checks, handler, "check")
+end
+
+-- Runs for every file a template would write, with `{ rel = ..., template = ..., flavour = ... }`.
+-- Return `{ skip = true }` to leave it out. Anything else writes the file as usual.
+function wing.on.file(handler)
+  append(wing.filters, handler, "file")
 end
 
 -- Reserved, and deliberately named now rather than later: the namespace is settled so that adding

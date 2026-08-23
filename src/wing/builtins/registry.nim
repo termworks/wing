@@ -46,3 +46,13 @@ proc configPlaceholders*(ctx: openArray[(string, string)]): seq[(string, string)
 proc runConfigApplyHandlers*(ctx: openArray[(string, string)]) =
   ensureLoaded()
   runApplyHandlers(configVm.L, ctx)
+
+proc runTemplateChecks*(name: string;
+    ctx: openArray[(string, string)]): tuple[ok: bool; reason: string] =
+  ensureLoaded()
+  runChecks(configVm.L, name, ctx)
+
+proc templateFileAllowed*(name: string; ctx: openArray[(string,
+    string)]): bool =
+  ensureLoaded()
+  fileAllowed(configVm.L, name, ctx)

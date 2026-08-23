@@ -4,6 +4,7 @@ import std/[os, sequtils, strutils]
 
 import ../apply
 import ../builtins/registry
+import ./plugin
 import ../builtins/flavours
 import ../builtins/install
 import ../cliargs
@@ -26,6 +27,10 @@ Commands:
   tag remove NAME TAG
   apply TEMPLATE TARGET_PATH [--name PROJECT_NAME] [--flavour FLAVOUR] [--dry-run] [--force|--skip-existing] [--allow-symlinks]
   builtins [list|install] [--force]
+  install SOURCE [--yes]      a path, or github:user/repo@rev
+  installed                   what was installed, and whether its code changed
+  allow NAME                  agree to an installed template's current contents
+  uninstall NAME
   remove NAME
 
 Python flavours:
@@ -241,6 +246,17 @@ proc handleTemplate*(argsIn: seq[string]) =
     ]
     setExtraPlaceholders(configPlaceholders(context))
 
+    # The template's own logic gets a say before anything is written: it can warn about the machine
+    # it is running on, or refuse outright. This is where "nix is not installed" is answered by the
+    # template rather than by wing.
+    let verdict = runTemplateChecks(templateName, context)
+    if not verdict.ok:
+      die("Template '" & templateName & "' declined to apply: " &
+          verdict.reason)
+
+    setFileFilter(proc (rel: string): bool =
+      templateFileAllowed(templateName, context & @[("rel", rel)]))
+
     let plan = buildTemplatePlan(source.path, targetPath, renderedName,
         allowSymlinks)
     if dryRun:
@@ -266,6 +282,14 @@ proc handleTemplate*(argsIn: seq[string]) =
       else: ""
     echo "Template '" & templateName & "'" & flavourSuffix &
         " successfully applied to '" & targetPath & "'"
+  of "install":
+    handleInstall(args)
+  of "installed":
+    handleInstalled(args)
+  of "allow", "trust":
+    handleAllow(args)
+  of "uninstall":
+    handleRemoveInstalled(args)
   of "remove", "rm", "delete", "del":
     rejectUnknownOptions(args)
     requireArgs(args, 1, "wing template remove NAME")

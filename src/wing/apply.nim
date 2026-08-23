@@ -2,6 +2,7 @@
 
 import std/[os, strutils]
 
+import ./templates/manifest
 import ./util
 
 type
@@ -13,6 +14,7 @@ type
     conflicts*: seq[string]
     rejectedSymlinks*: seq[string]
     skippedReplacements*: seq[string]
+    skippedFiles*: seq[string]
 
 proc childRel*(parent, child: string): string =
   if parent.len == 0: child else: parent / child
@@ -29,6 +31,21 @@ var extraPlaceholders: seq[(string, string)]
 
 proc setExtraPlaceholders*(pairs: seq[(string, string)]) =
   extraPlaceholders = pairs
+
+# Asked for every file a template would write. Set once before an apply, for the same reason the
+# placeholders are: threading it through every proc that walks a directory would touch all of them.
+var fileFilter: proc (rel: string): bool {.closure.}
+
+proc setFileFilter*(filter: proc (rel: string): bool {.closure.}) =
+  fileFilter = filter
+
+proc keepFile(rel: string): bool =
+  # A template's manifest and its logic describe the template; they are not part of what it
+  # produces. Excluded here rather than only where bundled templates are materialised, because an
+  # installed template is applied straight out of its directory and never passes through that.
+  if rel in [ManifestName, LogicName]:
+    return false
+  if fileFilter == nil: true else: fileFilter(rel)
 
 proc placeholderPairs*(projectName: string): seq[(string, string)] =
   let kebab = projectName.replace("_", "-")
@@ -94,6 +111,11 @@ proc addConflictIfNeeded*(plan: var TemplateApplyPlan; target, rel: string) =
 
 proc addFileToPlan*(plan: var TemplateApplyPlan; srcPath, targetRoot, rel,
     projectName: string) =
+  # A file a template's own logic declines is left out of the plan too, so a dry run shows what
+  # would really be written rather than what the directory happens to hold.
+  if not keepFile(rel):
+    plan.skippedFiles.add(rel)
+    return
   plan.copyFiles.add(rel)
   addConflictIfNeeded(plan, targetRoot / rel, rel)
   let status = replacementStatus(srcPath, rel, projectName)
@@ -156,6 +178,7 @@ proc printTemplatePlan*(templateName, targetPath, flavour: string;
   printList("Conflicts", plan.conflicts)
   printList("Rejected symlinks", plan.rejectedSymlinks)
   printList("Skipped placeholder replacements", plan.skippedReplacements)
+  printList("Left out by the template's own logic", plan.skippedFiles)
 
 proc replacePlaceholdersInFile*(path, rel, projectName: string;
     skipped: var seq[string]) =
@@ -176,6 +199,8 @@ proc replacePlaceholdersInFile*(path, rel, projectName: string;
 
 proc copyTemplateFile*(srcPath, targetPath, rel, projectName: string; force,
     skipExisting: bool; skippedReplacements: var seq[string]) =
+  if not keepFile(rel):
+    return
   if fileExists(targetPath) or dirExists(targetPath):
     if skipExisting:
       return
