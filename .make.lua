@@ -261,6 +261,48 @@ make.recipe{
   run = function() sh.nimble("install", "-y", "--depsOnly") end,
 }
 
+-- Templates are not carried inside the binary, so they have to reach the config directory to be
+-- usable outside this checkout. $XDG_CONFIG_HOME/wing/templates is the highest-priority root, so
+-- what lands there is what wing uses.
+--
+-- Written through the config path rather than anywhere more specific: someone whose ~/.config/wing
+-- is a symlink into a dotfiles repo gets the files there, and someone with an ordinary directory
+-- gets them there. Neither case needs to be detected.
+make.recipe{
+  name = "templates",
+  desc = "sync the templates into $XDG_CONFIG_HOME/wing/templates",
+  params = { { "--dest", desc = "somewhere other than the config directory" } },
+  run = function(a)
+    assert(oslo.run{ "sh", "-c", "command -v rsync", capture = true }.ok,
+           "rsync is not installed; install it first")
+
+    local dest = a.dest
+    if not dest then
+      local config = os.getenv("XDG_CONFIG_HOME")
+      if not config or config == "" then config = os.getenv("HOME") .. "/.config" end
+      dest = config .. "/wing/templates"
+    end
+    sh.mkdir("-p", dest)
+
+    -- One template at a time, each mirrored with --delete, rather than one --delete over the whole
+    -- tree. The destination is also where a user keeps templates of their own, and a tree-wide
+    -- mirror would delete every one of them.
+    local synced = 0
+    for _, path in ipairs(oslo.fs.glob("templates/*")) do
+      if oslo.fs.stat(path .. "/") then
+        local name = oslo.path.name(path)
+        sh.mkdir("-p", dest .. "/" .. name)
+        sh.rsync("-a", "--delete", path .. "/", dest .. "/" .. name .. "/")
+        synced = synced + 1
+      end
+    end
+
+    print(oslo.ui.style("✓ ", { fg = "green" }) ..
+          ("%d template(s) -> %s"):format(synced, dest))
+    print(dim("  anything else in that directory is left alone"))
+  end,
+}
+
 make.recipe{
   name = "install",
   desc = "put the binary in $PREFIX/bin",

@@ -15,7 +15,15 @@ returns nothing — wing reads the tables back once every chunk has run.
 | `$XDG_CONFIG_HOME/wing/init.lua` | your config: settings, overrides, placeholders, hooks |
 
 Templates are **not** carried inside the binary — a fresh install has none until a tree is
-reachable.
+reachable. From a wing checkout, `make templates` puts them where wing will find them:
+
+```sh
+make templates                 # -> $XDG_CONFIG_HOME/wing/templates
+make templates --dest=/opt/wing/templates
+```
+
+It mirrors each bundled template individually, so a template of your own sitting in that directory
+is left alone rather than deleted.
 
 ## Template roots
 
