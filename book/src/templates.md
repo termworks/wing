@@ -74,8 +74,29 @@ recipes.
 | d | dub | — |
 | haskell | cabal | — |
 | crystal | crystal + shards | — |
+| carbon | carbon | — |
+| mojo | mojo | — |
 | go, nim, rust | the language's own tool | — |
 | python | pyproject | `nix` (default), `uv`, `pixi`, `micromamba` |
+
+### Carbon and Mojo bring their own compiler
+
+Neither is in nixpkgs, and neither can be installed from a distribution's package manager: Carbon
+publishes prebuilt nightlies and nothing else, and Mojo is a closed-source conda package under
+Modular's own licence. So the template declares the derivation that unpacks one, and the flake it
+generates *is* how you get a toolchain. Without nix these two templates produce a project you
+cannot build, which is what their `init.lua` warns about at generation time.
+
+That derivation is pinned to an exact version and hash, because nix cannot express "whatever is
+newest" — `fetchurl` needs the hash before it fetches. For Carbon, whose only releases are
+nightlies, moving the pin is therefore a command rather than a default:
+
+```sh
+make toolchain      # read the newest nightly, hash it, rewrite the two lines in flake.nix
+```
+
+It rewrites the generated project's own `flake.nix`, so a checkout keeps building against the
+toolchain it was written for until somebody decides otherwise.
 
 Where the build system is fixed but the compiler is not, the compiler is a flag rather than a
 flavour: `make build --compiler dmd` for D, `make config --toolchain gcc` for C and C++.

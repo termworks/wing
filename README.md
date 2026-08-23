@@ -84,6 +84,8 @@ wing template apply crystal /tmp/my-cr-tool --name my_cr_tool
 wing template apply c3 /tmp/my-c3-tool --name my_c3_tool
 wing template apply ocaml /tmp/my-ml-tool --name my_ml_tool
 wing template apply vala /tmp/my-vala-tool --name my_vala_tool
+wing template apply carbon /tmp/my-carbon-tool --name my_carbon_tool
+wing template apply mojo /tmp/my-mojo-tool --name my_mojo_tool
 wing template apply python /tmp/my-python-tool --name my_python_tool
 wing template apply python /tmp/my-uv-tool --name my_uv_tool --flavour uv
 wing template apply python /tmp/my-pixi-tool --name my_pixi_tool --flavour pixi

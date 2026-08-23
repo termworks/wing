@@ -113,6 +113,8 @@ doAssert builtins.contains("ocaml\tocaml\t")
 doAssert builtins.contains("vala\tvala\t")
 doAssert builtins.contains("d\td\t")
 doAssert builtins.contains("python\tpython\t")
+doAssert builtins.contains("carbon\tcarbon\t")
+doAssert builtins.contains("mojo\tmojo\t")
 let builtinDisplay = checked(wing & "template builtins list")
 doAssert builtinDisplay.contains("nix (default), uv, pixi, micromamba")
 discard checked(wing & "template builtins install")
@@ -313,7 +315,7 @@ let initPrefix = "XDG_DATA_HOME=" & quoteShell(initDataHome) & " HOME=" &
 # reach rather than writing one out. Here that is the repository's own templates/, via the cwd.
 let initOutput = checked(initPrefix & quoteShell(Binary) & " init")
 doAssert initOutput.contains("Initialized wing data")
-doAssert initOutput.contains("Declared: 15"), initOutput
+doAssert initOutput.contains("Declared: 17"), initOutput
 
 # A reachable tree that declares nothing is reported, not treated as a failure.
 let emptyRoot = "/tmp/wing-init-empty-templates"
@@ -370,8 +372,8 @@ doAssert missing.code != 0
 # --- every bundled template carries logic of its own --------------------------
 # Not decoration: each one generates a flake.nix and a .env.lua that call nix, so a machine without
 # nix produces a project whose dev shell cannot come up. The template is what knows that.
-for name in ["c", "c3", "cpp", "crystal", "d", "go", "haskell", "nim", "ocaml",
-             "odin", "python", "rust", "v", "vala", "zig"]:
+for name in ["c", "c3", "carbon", "cpp", "crystal", "d", "go", "haskell", "mojo",
+             "nim", "ocaml", "odin", "python", "rust", "v", "vala", "zig"]:
   let logic = "templates" / name / "init.lua"
   doAssert fileExists(logic), name & " should carry an init.lua: " & logic
   doAssert readFile(logic).contains("wing.on.check"),
@@ -456,3 +458,38 @@ doAssert readFile(valaTarget / "src" / "sample_app.vala").contains("namespace Sa
 doAssert readFile(valaTarget / "flake.nix").contains("pkgs.vala")
 doAssert readFile(valaTarget / "flake.nix").contains("pkgs.gcc"),
     "vala emits C, so a C compiler belongs in the dev shell"
+
+# --- Carbon and Mojo bring their own toolchain, because no distribution has one ---
+# Both compilers are published as prebuilt archives and neither is in nixpkgs, so the template
+# declares the derivation that unpacks one. That is the whole reason `nix_packages` is free-form
+# Nix text rather than a list of package names.
+let carbonTarget = "/tmp/wing-templates-builtin-carbon"
+removeDir(carbonTarget)
+discard checked(wing & "template apply carbon " & quoteShell(carbonTarget) &
+    " --name sample_app")
+doAssert fileExists(carbonTarget / "src" / "main.carbon")
+doAssert fileExists(carbonTarget / "src" / "lib.carbon")
+doAssert fileExists(carbonTarget / "src" / "lib_test.carbon")
+# A Carbon package name is a single identifier, so the module placeholder has to render one.
+doAssert readFile(carbonTarget / "src" / "lib.carbon").contains(
+    "package SampleApp"),
+    "{{PascalName}} should render a package name Carbon will accept"
+let carbonFlake = readFile(carbonTarget / "flake.nix")
+doAssert carbonFlake.contains("carbon_toolchain-"), carbonFlake
+doAssert carbonFlake.contains("nightly"), "the Carbon toolchain is pinned to a nightly"
+# The pin is what `make toolchain` moves, so both lines it rewrites have to be there to find.
+doAssert carbonFlake.contains("hash = \"sha256-"), carbonFlake
+
+let mojoTarget = "/tmp/wing-templates-builtin-mojo"
+removeDir(mojoTarget)
+discard checked(wing & "template apply mojo " & quoteShell(mojoTarget) &
+    " --name sample_app")
+doAssert fileExists(mojoTarget / "src" / "main.mojo")
+doAssert fileExists(mojoTarget / "src" / "main_test.mojo")
+doAssert fileExists(mojoTarget / "src" / "demo.mojo")
+let mojoFlake = readFile(mojoTarget / "flake.nix")
+doAssert mojoFlake.contains("conda.modular.com"), mojoFlake
+# mojo resolves its formatter through its own bin directory, so the shell has to supply mblack too.
+doAssert mojoFlake.contains("mblack"), mojoFlake
+doAssert mojoFlake.contains("MODULAR_HOME"),
+    "the compiler needs a writable MODULAR_HOME, which the store path is not"
