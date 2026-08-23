@@ -23,9 +23,10 @@ proc copyBuiltinTemplateDir*(srcRoot, dstRoot, relRoot: string;
       createDir(dstPath)
       copyBuiltinTemplateDir(path, dstRoot, rel, tmpl, flavour)
     of pcFile:
-      # The manifest describes the template; it is not part of what the template produces. Only at
-      # the top level, so a template that legitimately generates a template.lua still can.
-      if relRoot.len == 0 and splitPath(path).tail == ManifestName:
+      # The manifest describes the template and init.lua is its logic; neither is part of what the
+      # template produces. Only at the top level, so a template that legitimately generates one of
+      # these files for the project it creates still can.
+      if relRoot.len == 0 and splitPath(path).tail in [ManifestName, LogicName]:
         continue
       createDir(parentDir(dstPath))
       writeFile(dstPath, renderBuiltinTemplate(readFile(path), tmpl, flavour))

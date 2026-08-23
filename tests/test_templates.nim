@@ -360,3 +360,25 @@ discard checked(wing & "template remove links")
 
 let missing = run(wing & "template info renamed")
 doAssert missing.code != 0
+
+# --- every bundled template carries logic of its own --------------------------
+# Not decoration: each one generates a flake.nix and a .env.lua that call nix, so a machine without
+# nix produces a project whose dev shell cannot come up. The template is what knows that.
+for name in ["c", "cpp", "d", "go", "nim", "python", "rust", "v", "zig"]:
+  let logic = "templates" / name / "init.lua"
+  doAssert fileExists(logic), name & " should carry an init.lua: " & logic
+  doAssert readFile(logic).contains("wing.on.check"),
+      name & "'s init.lua should register a check"
+
+# Applying on a machine without nix says so, and names what is missing.
+let noNixTarget = "/tmp/wing-templates-no-nix"
+removeDir(noNixTarget)
+let withoutNix = run("PATH=/usr/bin:/bin " & envPrefix & quoteShell(Binary) &
+    " template apply go " & quoteShell(noNixTarget) & " --name sample_app")
+doAssert withoutNix.code == 0, withoutNix.output
+doAssert withoutNix.output.contains("nix is not installed"), withoutNix.output
+# The flake is still written: .env.lua calls nix_develop(), so a project without it would have a
+# broken directory environment rather than a working one missing a file.
+doAssert fileExists(noNixTarget / "flake.nix"),
+    "the flake belongs to the set even when nix is absent"
+doAssert not fileExists(noNixTarget / "init.lua")
