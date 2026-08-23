@@ -1,11 +1,13 @@
 const std = @import("std");
 
-pub fn main() !void {
+// Zig 0.16 hands `main` a `std.process.Init`, which carries the arguments and an `Io` for every
+// write. That replaces the old `std.process.args()` and the unparameterised stdout writer.
+pub fn main(init: std.process.Init) !void {
     var stdout_buffer: [1024]u8 = undefined;
-    var stdout_writer = std.fs.File.stdout().writer(&stdout_buffer);
+    var stdout_writer = std.Io.File.stdout().writer(init.io, &stdout_buffer);
     const stdout = &stdout_writer.interface;
 
-    var args = std.process.args();
+    var args = init.minimal.args.iterate();
     _ = args.skip();
     if (args.next()) |arg| {
         if (std.mem.eql(u8, arg, "--help") or std.mem.eql(u8, arg, "-h")) {
