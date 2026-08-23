@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.7.1] - 2026-08-23
+
+### <!-- 0 -->⛰️  Features
+
+- Add carbon and mojo templates
+- Let a template describe its shell
+- Add ocaml and vala templates
+- Add crystal and c3 templates
+- Add haskell and odin templates
+
+### <!-- 1 -->🐛 Bug Fixes
+
+- Repair odin and haskell ci quoting
+
+### <!-- 7 -->⚙️ Miscellaneous Tasks
+
+- Ignore compiled test binaries
+
 ## [0.7.0] - 2026-08-23
 
 ### <!-- 0 -->⛰️  Features

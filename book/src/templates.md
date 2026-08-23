@@ -67,9 +67,36 @@ recipes.
 | c, cpp | xmake or CMake | `xmake` (default), `cmake` |
 | zig | zig | — |
 | v | v | — |
+| odin | odin | — |
+| c3 | c3c | — |
+| ocaml | dune | — |
+| vala | meson (valac emits C) | — |
 | d | dub | — |
+| haskell | cabal | — |
+| crystal | crystal + shards | — |
+| carbon | carbon | — |
+| mojo | mojo | — |
 | go, nim, rust | the language's own tool | — |
 | python | pyproject | `nix` (default), `uv`, `pixi`, `micromamba` |
+
+### Carbon and Mojo bring their own compiler
+
+Neither is in nixpkgs, and neither can be installed from a distribution's package manager: Carbon
+publishes prebuilt nightlies and nothing else, and Mojo is a closed-source conda package under
+Modular's own licence. So the template declares the derivation that unpacks one, and the flake it
+generates *is* how you get a toolchain. Without nix these two templates produce a project you
+cannot build, which is what their `init.lua` warns about at generation time.
+
+That derivation is pinned to an exact version and hash, because nix cannot express "whatever is
+newest" — `fetchurl` needs the hash before it fetches. For Carbon, whose only releases are
+nightlies, moving the pin is therefore a command rather than a default:
+
+```sh
+make toolchain      # read the newest nightly, hash it, rewrite the two lines in flake.nix
+```
+
+It rewrites the generated project's own `flake.nix`, so a checkout keeps building against the
+toolchain it was written for until somebody decides otherwise.
 
 Where the build system is fixed but the compiler is not, the compiler is a flag rather than a
 flavour: `make build --compiler dmd` for D, `make config --toolchain gcc` for C and C++.
@@ -104,7 +131,11 @@ assumes zig-as-compiler and does not drive a host gcc or clang, which is the cho
 exist to give. Zig remains the build system for Zig.
 
 Template placeholders are replaced in both file contents and file names, so
-`{{snake_name}}.nimble` becomes `my_nim_tool.nimble`.
+`{{snake_name}}.nimble` becomes `my_nim_tool.nimble`. The set is `{{PROJECT_NAME}}`,
+`{{project_name}}`, `{{PROJECT-NAME}}`, `{{project-name}}`, `{{NAME}}`, `{{name}}`,
+`{{kebab_name}}`, `{{snake_name}}`, `{{PascalName}}` and `{{Snake_name}}` — the last two for
+languages whose identifiers must start with a capital: `DemoThing` for a Haskell module,
+`Demo_thing` for an OCaml one.
 
 Templates live on disk, not inside the binary — see [Configuration](./config.md)
 for the roots that are searched and how to add your own.

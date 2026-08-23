@@ -59,7 +59,9 @@ proc builtinFlavourNixPackages*(tmpl: TemplateSpec; flavour: string): string =
 proc builtinEnvironmentDescription*(tmpl: TemplateSpec;
     flavour: string): string =
   let idx = findFlavour(tmpl, flavour)
-  if idx >= 0: tmpl.flavours[idx].environment else: ""
+  if idx >= 0 and tmpl.flavours[idx].environment.len > 0:
+    return tmpl.flavours[idx].environment
+  tmpl.environment
 
 proc renderBuiltinTemplate*(content: string; tmpl: TemplateSpec;
     flavour = ""): string =

@@ -7,3 +7,6 @@
 /coverage.out
 /result
 playground
+# `nim c -r tests/test_x.nim` leaves the compiled binary beside its source.
+/tests/test_*
+!/tests/test_*.nim
