@@ -160,6 +160,10 @@ doAssert fileExists(cppTarget / "test" / "basic_test.cpp")
 doAssert readFile(cppTarget / "flake.nix").contains("pkgs.xmake")
 # .make.lua drives the build system; it is not the build system.
 doAssert readFile(cppTarget / ".make.lua").contains("sh.xmake(")
+# clang is the default compiler, and the shipped build is static musl.
+doAssert readFile(cppTarget / ".make.lua").contains("or \"clang\""), "clang should be the default"
+doAssert readFile(cppTarget / ".make.lua").contains("MUSL_CC")
+doAssert readFile(cppTarget / "flake.nix").contains("MUSL_CC = pkgs.pkgsMusl.stdenv.cc")
 
 # The cmake flavour swaps the build file and the dev shell, and nothing else.
 let cppCmakeTarget = "/tmp/wing-templates-builtin-cpp-cmake"

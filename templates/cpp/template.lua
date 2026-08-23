@@ -21,7 +21,7 @@ wing.template("cpp", {
             pkgs.gcc
             pkgs.clang-tools
             pkgs.gdb]],
-      environment = "xmake drives the build. `make config --toolchain clang` switches compiler, and xmake resolves packages itself.",
+      environment = "xmake drives the build, clang by default. `make static` links a musl binary that needs nothing on the target machine.",
     },
     {
       name = "cmake",
@@ -31,7 +31,7 @@ wing.template("cpp", {
             pkgs.gcc
             pkgs.clang-tools
             pkgs.gdb]],
-      environment = "CMake drives the build. `make config --toolchain clang` switches compiler; Ninja is used when present.",
+      environment = "CMake drives the build, clang by default and Ninja when present. `make static` links a musl binary that needs nothing on the target machine.",
     },
   },
 })

@@ -78,14 +78,15 @@ make.recipe{
 ---------------------------------------------------------------------------- cmake
 
 local BUILD_DIR = os.getenv("BUILD_DIR") or "build"
+local STATIC_DIR = BUILD_DIR .. "-static"
 
 make.recipe{
   name = "config",
   desc = "configure the build tree: --toolchain clang | gcc",
-  params = { { "--toolchain", desc = "clang or gcc; the default is whatever cmake finds" } },
+  params = { { "--toolchain", desc = "clang or gcc; clang by default" } },
   run = function(a)
     local argv = { "-S", ".", "-B", BUILD_DIR, "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON" }
-    local chain = a.toolchain or TOOLCHAIN
+    local chain = a.toolchain or TOOLCHAIN or "clang"
     if chain == "clang" then
       argv[#argv + 1] = "-DCMAKE_C_COMPILER=clang"
       argv[#argv + 1] = "-DCMAKE_CXX_COMPILER=clang++"
@@ -124,7 +125,54 @@ make.recipe{ name = "install", desc = "install into $PREFIX", deps = { "build" }
              run = function() sh.cmake("--install", BUILD_DIR, "--prefix", PREFIX) end }
 
 make.recipe{ name = "clean", desc = "remove the build tree",
-             run = function() sh.rm("-rf", BUILD_DIR) end }
+             run = function() sh.rm("-rf", BUILD_DIR, STATIC_DIR) end }
+
+-------------------------------------------------------------------- static musl
+
+-- What ships. A binary linked against the host libc stops working the moment it is copied to a
+-- machine with a different one, so the release build targets musl and links statically.
+--
+-- The toolchain comes from the flake as a path (MUSL_CC), not from $PATH: musl headers on the
+-- default search path make an ordinary build compile against musl and link against glibc, which
+-- succeeds silently and crashes at startup.
+--
+-- gcc rather than clang here, and only here: musl-clang has no C++ standard library, so a clang
+-- musl build works for C and falls over on the first #include <string>. `make config` still
+-- defaults to clang, which is what the dev loop uses.
+local function musl_cc()
+  local root = os.getenv("MUSL_CC") or ""
+  assert(root ~= "", "the static build needs MUSL_CC from the dev shell: nix develop")
+  return root
+end
+
+-- Asked of the ELF, not assumed. "static" quietly coming out dynamic is only ever noticed by
+-- whoever the binary fails for. `ldd` is not enough: it prints "statically linked" for a binary
+-- that still carries an INTERP and will not start.
+local function assert_static(path)
+  local segments = oslo.run{ "readelf", "-l", path, capture = true }
+  local dynamic = oslo.run{ "readelf", "-d", path, capture = true }
+  assert(segments.ok, path .. " was not produced, or readelf could not read it")
+  assert(not (segments.out or ""):find("program interpreter"),
+         path .. " requests a dynamic loader; it is not static")
+  assert(not (dynamic.out or ""):find("NEEDED"),
+         path .. " has NEEDED entries; it is not static")
+  print(oslo.ui.style("✓ static", { fg = "green" }) .. "  " .. path)
+end
+
+make.recipe{
+  name = "static",
+  desc = "a static musl build of everything, for shipping",
+  run = function()
+    local cc = musl_cc()
+    sh.cmake("-S", ".", "-B", STATIC_DIR,
+             "-DCMAKE_BUILD_TYPE=Release",
+             "-DCMAKE_C_COMPILER=" .. cc .. "/bin/gcc",
+             "-DCMAKE_CXX_COMPILER=" .. cc .. "/bin/g++",
+             "-DCMAKE_EXE_LINKER_FLAGS=-static")
+    sh.cmake("--build", STATIC_DIR, "--parallel")
+    for _, path in ipairs(oslo.fs.glob(STATIC_DIR .. "/*_test")) do assert_static(path) end
+  end,
+}
 
 make.recipe{ name = "compile", desc = "clean, then build", deps = { "clean", "build" } }
 make.alias("c", "compile")

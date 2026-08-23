@@ -72,7 +72,14 @@ recipes.
 | python | pyproject | `nix` (default), `uv`, `pixi`, `micromamba` |
 
 Where the build system is fixed but the compiler is not, the compiler is a flag rather than a
-flavour: `make build --compiler dmd` for D, `make config --toolchain clang` for C and C++.
+flavour: `make build --compiler dmd` for D, `make config --toolchain gcc` for C and C++ — which
+default to **clang**.
+
+C and C++ also carry a `make static` recipe. It builds against the musl toolchain the flake
+exports as `MUSL_CC` and refuses to finish unless the result really is static, so what ships needs
+nothing on the target machine. It uses gcc rather than clang, and only there: musl-clang has no C++
+standard library, so a clang musl build works for C and fails on the first `#include <string>`. The
+dev loop stays clang.
 
 For C and C++ the flavour picks the build system and the compiler is chosen at configure time:
 

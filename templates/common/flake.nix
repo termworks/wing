@@ -88,6 +88,12 @@
             nixglPkgs.nixVulkanNvidia
           ] ++ guiLibs;
 
+          # A musl toolchain for the static build, handed over as a path rather than a package.
+          # As a package its headers land on the default search path, and an ordinary build then
+          # compiles against musl while linking against glibc -- which succeeds without a word and
+          # crashes at startup. Only the static build is given it: .make.lua reads MUSL_CC.
+          MUSL_CC = pkgs.pkgsMusl.stdenv.cc;
+
           LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath guiLibs;
           WGPU_VALIDATION = "0";
           WGPU_DEBUG = "0";
