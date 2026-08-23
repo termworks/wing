@@ -125,7 +125,7 @@ local OPTIMIZE = os.getenv("OPTIMIZE") or "ReleaseSafe"
 
 make.recipe{ name = "build", desc = "the binary",
              run = function()
-               sh.zig("build", "-Doptimize=" .. OPTIMIZE)
+               sh.zig("build", "-Doptimize=" .. OPTIMIZE, "-Dversion=" .. VERSION)
                report("zig-out/bin/" .. NAME)
              end }
 make.alias("b", "build")

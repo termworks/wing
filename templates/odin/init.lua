@@ -30,8 +30,9 @@ wing.on.check(function(ctx)
     wing.warn("  `make build` will not work until one of those is fixed")
   end
 
-  -- odinfmt is part of ols, not odin, so having the compiler is not having the formatter.
+  -- odinfmt is part of ols, which the dev shell does not carry: it does not build against the
+  -- Odin this flake pins. `make fmt` says so and carries on rather than failing.
   if wing.sys.has("odin") and not wing.sys.has("odinfmt") then
-    wing.warn("  odin is here but odinfmt is not; it comes with ols, and `make fmt` needs it")
+    wing.warn("  odinfmt is not on $PATH either; `make fmt` will skip rather than format")
   end
 end)

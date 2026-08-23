@@ -79,6 +79,34 @@ recipes.
 | go, nim, rust | the language's own tool | — |
 | python | pyproject | `nix` (default), `uv`, `pixi`, `micromamba` |
 
+### Releasing
+
+Every template ships the same `.github/workflows/release.yml`, and it is the same one in every
+language — only the build command and what goes in the tarball differ.
+
+```sh
+make release --type patch    # bump, changelog, commit, tag, push
+```
+
+Pushing the `v*` tag is the whole release. The workflow then:
+
+1. builds on `ubuntu-latest` and `ubuntu-24.04-arm`, **inside the project's own flake** — the
+   binary that ships was compiled by the toolchain the dev shell hands you, and a second pin in the
+   workflow would be a second thing to keep in step;
+2. packages `<name>-<version>-linux-<arch>.tar.gz` with the artifact, `README` and `LICENSE`;
+3. checksums every asset into one `SHA256SUMS`;
+4. creates the release the tag points at — it does not wait for one to exist — and uploads.
+
+What lands in the tarball is whatever the project produces: the binary for an application, the
+static library and its headers for the C and C++ templates, the `.crate` for Rust, and the wheel
+and sdist for Python.
+
+Two templates build for amd64 only: Carbon publishes a prebuilt x86_64 nightly and Mojo a linux-64
+conda package, so there is no arm64 toolchain for the flake to unpack.
+
+`workflow_dispatch` takes an existing tag, for rebuilding an asset that failed without cutting
+another release.
+
 ### A generated project is a repository
 
 `wing template apply` finishes by running `git init`, staging what it wrote, and `git flow init -d

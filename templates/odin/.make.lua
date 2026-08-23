@@ -168,23 +168,27 @@ make.recipe{ name = "check", desc = "type-check without producing a binary",
              run = function() sh.odin("check", SRC) end }
 make.alias("vet", "check")
 
--- odinfmt ships with ols rather than with odin, so a dev shell that has the compiler does not
--- necessarily have the formatter. The recipes say which one is missing rather than failing on a
--- command-not-found.
-local function need_odinfmt()
-  assert(oslo.run{ "sh", "-c", "command -v odinfmt", capture = true }.ok,
-         "odinfmt comes with ols, which is not installed; `nix develop` brings both")
+-- odinfmt ships with ols rather than with odin, and ols is not in the dev shell: it does not build
+-- against the Odin the flake pins. So formatting is reported as unavailable rather than asserted --
+-- a gate that cannot run is not a gate that failed, and failing `verify` over a missing optional
+-- tool teaches people to skip `verify`.
+local function have_odinfmt()
+  if oslo.run{ "sh", "-c", "command -v odinfmt", capture = true }.ok then
+    return true
+  end
+  print("odinfmt is not installed (it comes with ols); skipping")
+  return false
 end
 
 make.recipe{ name = "fmt", desc = "format the sources",
-             run = function() need_odinfmt(); sh.odinfmt(SRC, "-w") end }
+             run = function() if have_odinfmt() then sh.odinfmt(SRC, "-w") end end }
 
 -- odinfmt has no check mode, so the sources are formatted in a copy and compared.
 make.recipe{
   name = "fmt-check",
   desc = "fail if anything is unformatted",
   run = function()
-    need_odinfmt()
+    if not have_odinfmt() then return end
     local scratch = "/tmp/" .. NAME .. "-odinfmt"
     sh.rm("-rf", scratch)
     sh.cp("-r", SRC, scratch)

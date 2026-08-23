@@ -410,8 +410,9 @@ discard checked(wing & "template apply odin " & quoteShell(odinTarget) &
 doAssert fileExists(odinTarget / "src" / "main.odin")
 doAssert fileExists(odinTarget / "src" / "main_test.odin")
 doAssert readFile(odinTarget / "flake.nix").contains("pkgs.odin")
-# odinfmt ships with ols, not odin, so the dev shell has to bring both.
-doAssert readFile(odinTarget / "flake.nix").contains("pkgs.ols")
+# ols -- and with it odinfmt -- is deliberately absent: it does not build against the Odin this
+# pin provides, and a package that fails to build takes the whole dev shell with it.
+doAssert not readFile(odinTarget / "flake.nix").contains("pkgs.ols")
 
 # Crystal compiles to a native binary, so it belongs here with the rest.
 let crTarget = "/tmp/wing-templates-builtin-crystal"
@@ -576,3 +577,26 @@ doAssert licence.contains("bresilla (trim.bresilla@bresilla.com)"), licence
 # The copyright year is the year it was generated, not the year the template was written.
 doAssert licence.contains("Copyright (c) " & $now().year), licence
 doAssert not licence.contains("{{"), "the licence should have no placeholders left"
+
+# --- every template releases the same way --------------------------------------
+# One shape everywhere: a `v*` tag is the trigger, the build happens inside the project's own
+# flake, and the assets are checksummed and attached to a release created by the run itself. A
+# template whose release workflow only compiles publishes nothing, which is how a tag ends up with
+# no binary behind it.
+var releaseWorkflows = 0
+for workflow in walkDirRec("templates"):
+  if workflow.extractFilename != "release.yml":
+    continue
+  releaseWorkflows.inc
+  let text = readFile(workflow)
+  doAssert text.contains("tags: [\"v*\"]"), workflow & " should fire on any v* tag"
+  doAssert text.contains("nix develop --impure"),
+      workflow & " should build inside the project's own flake"
+  doAssert text.contains("nix-installer-action"), workflow & " should install nix"
+  doAssert text.contains("sha256sum"), workflow & " should checksum what it publishes"
+  doAssert text.contains("gh release create"),
+      workflow & " should create the release the tag points at"
+  doAssert not text.contains("release:\n    types:"),
+      workflow & " should not wait for a release to be made by hand"
+doAssert releaseWorkflows == 22,
+    "every template and flavour needs a release workflow, found " & $releaseWorkflows
