@@ -2,8 +2,26 @@ import std.stdio;
 
 import {{snake_name}}.core;
 
-/// The version this binary reports. dub.json holds the package version; keep the two in step.
-enum versionString = "0.1.0";
+/// The version is read from PROJECT at compile time rather than repeated here. dub.json carries no
+/// version of its own, so a literal in D source is a copy nothing keeps in step: it would still say
+/// 0.1.0 long after the project had moved on.
+enum versionString = readProjectVersion();
+
+private string readProjectVersion()
+{
+    import std.string : splitLines, startsWith, strip;
+
+    string[] fields;
+    foreach (line; import("PROJECT").splitLines())
+    {
+        const trimmed = line.strip();
+        if (trimmed.length == 0 || trimmed.startsWith("#"))
+            continue;
+        fields ~= trimmed;
+    }
+    assert(fields.length >= 2, "PROJECT is missing its version line");
+    return fields[1];
+}
 
 void main(string[] args)
 {

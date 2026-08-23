@@ -6,5 +6,6 @@
   "targetName": "{{kebab_name}}",
   "sourcePaths": ["source"],
   "importPaths": ["source"],
+  "stringImportPaths": ["."],
   "dependencies": {}
 }
