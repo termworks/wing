@@ -18,5 +18,8 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends build-essential cmake clang-format
       - name: Verify
-        run: make verify
+        run: |
+          cmake -S . -B build -Wno-dev -D{{NAME}}_ENABLE_TESTS=ON
+          cmake --build build --parallel
+          ctest --test-dir build --output-on-failure
 

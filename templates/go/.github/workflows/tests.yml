@@ -15,7 +15,10 @@ jobs:
         with:
           go-version-file: go.mod
       - name: Verify
-        run: make verify
+        run: |
+          test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
+          go vet ./...
+          go test ./...
       - name: Build
-        run: make build
+        run: go build -o {{kebab_name}} ./src
 

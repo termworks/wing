@@ -165,15 +165,16 @@ doAssert fileExists(pythonTarget / "pyproject.toml")
 doAssert fileExists(pythonTarget / "src" / "sample_app" / "__init__.py")
 doAssert fileExists(pythonTarget / "src" / "sample_app" / "__main__.py")
 doAssert fileExists(pythonTarget / "tests" / "test_cli.py")
-doAssert fileExists(pythonTarget / "Makefile")
+doAssert fileExists(pythonTarget / ".make.lua")
+doAssert fileExists(pythonTarget / ".env.lua")
 doAssert not dirExists(pythonTarget / ".venv")
 doAssert not fileExists(pythonTarget / "pixi.toml")
 doAssert not fileExists(pythonTarget / "environment.yml")
 doAssert readFile(pythonTarget / "flake.nix").contains(
     "pkgs.python3.withPackages")
 doAssert not readFile(pythonTarget / "flake.nix").contains("pkgs.uv")
-doAssert readFile(pythonTarget / "Makefile").contains(
-    "pure Nix (no virtualenv)")
+doAssert readFile(pythonTarget / ".make.lua").contains(
+    "There is no virtual environment")
 doAssert readFile(pythonTarget / "README.md").contains(
     "No virtual environment is created")
 
@@ -183,9 +184,9 @@ discard checked(wing & "template apply python " & quoteShell(pythonUvTarget) &
     " --name sample_app --flavour uv")
 doAssert readFile(pythonUvTarget / "flake.nix").contains("pkgs.uv")
 doAssert readFile(pythonUvTarget / "flake.nix").contains("pkgs.python3")
-doAssert readFile(pythonUvTarget / "Makefile").contains("$(UV) sync")
-doAssert readFile(pythonUvTarget / "Makefile").contains(
-    "UV_PYTHON_DOWNLOADS := never")
+doAssert readFile(pythonUvTarget / ".make.lua").contains("sh.uv(\"sync\")")
+doAssert readFile(pythonUvTarget / ".make.lua").contains(
+    "uv owns the local .venv")
 doAssert readFile(pythonUvTarget / "README.md").contains("local `.venv`")
 
 let pythonPixiTarget = "/tmp/wing-templates-builtin-python-pixi"
@@ -194,7 +195,7 @@ discard checked(wing & "template apply python " & quoteShell(pythonPixiTarget) &
     " --name sample_app --flavour=pixi")
 doAssert readFile(pythonPixiTarget / "flake.nix").contains("pkgs.pixi")
 doAssert fileExists(pythonPixiTarget / "pixi.toml")
-doAssert readFile(pythonPixiTarget / "Makefile").contains("$(PIXI) install")
+doAssert readFile(pythonPixiTarget / ".make.lua").contains("sh.pixi(\"install\")")
 
 let pythonMicromambaTarget =
   "/tmp/wing-templates-builtin-python-micromamba"
@@ -204,8 +205,8 @@ discard checked(wing & "template apply python " & quoteShell(
 doAssert readFile(pythonMicromambaTarget / "flake.nix").contains(
     "pkgs.micromamba")
 doAssert fileExists(pythonMicromambaTarget / "environment.yml")
-doAssert readFile(pythonMicromambaTarget / "Makefile").contains(
-    "$(MICROMAMBA) create")
+doAssert readFile(pythonMicromambaTarget / ".make.lua").contains(
+    "sh.micromamba(\"env\", \"update\"")
 
 let unknownFlavour = run(wing & "template apply python /tmp/wing-python-bad " &
     "--flavour conda")

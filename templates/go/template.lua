@@ -1,7 +1,7 @@
 local wing = require("wing")
 
 wing.template("go", {
-  description = "Go CLI app with Makefile, flake.nix, tests, and release hooks",
+  description = "Go CLI app with .make.lua, flake.nix, tests, and release hooks",
   language = "go",
   framework = "cli",
   tags = { "builtin", "go", "cli" },

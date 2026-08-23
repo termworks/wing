@@ -50,19 +50,22 @@ wing template apply python /tmp/my-pixi-tool --name my_pixi_tool --flavour pixi
 wing template apply python /tmp/my-mamba-tool --name my_mamba_tool --flavour micromamba
 ```
 
-`--flavor` is accepted as an alias for `--flavour`. The generated Makefile
+`--flavor` is accepted as an alias for `--flavour`. The generated `.make.lua`
 provides `make setup`; the `uv`, `pixi`, and `micromamba` flavours create their
-respective local environments only when that target or another dependent target
+respective local environments only when that recipe, or one that depends on it,
 is run.
 
 Template placeholders are replaced in both file contents and file names, so
 `{{snake_name}}.nimble` becomes `my_nim_tool.nimble`.
 
-The bundled templates are embedded in the `wing` binary. `wing init` writes them to
-`$XDG_DATA_HOME/wing/templates` and registers `go`, `zig`, `nim`, `rust`,
-`cpp`, and `python`.
+Templates live on disk, not inside the binary — see [Configuration](./config.md)
+for the roots that are searched and how to add your own.
 
-The embedded templates share one common base for files like `.envrc`,
-`flake.nix`, `README.md`, `.gitignore`, and `PROJECT`; each language directory
-only overlays its unique source, build, test, and workflow files. Python adds a
-shared Python base plus one selected environment flavour overlay.
+Every template shares one common base for files like `.env.lua`, `flake.nix`,
+`README.md`, `.gitignore`, and `PROJECT`; each language directory overlays its
+own source, build, test, and workflow files. Python adds a shared Python base
+plus one selected environment flavour overlay.
+
+A generated project is driven by `.make.lua` and `.env.lua` rather than a
+Makefile and an `.envrc`, so the same `make build` / `make test` / `make verify`
+recipes work in every language wing generates.

@@ -26,7 +26,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Build
-        run: make build
+        run: |
+          cmake -S . -B build -Wno-dev
+          cmake --build build --parallel
       - name: Package
         run: tar -czf "${{ matrix.artifact }}.tar.gz" build
       - name: Upload artifact

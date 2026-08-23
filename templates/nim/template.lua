@@ -1,7 +1,7 @@
 local wing = require("wing")
 
 wing.template("nim", {
-  description = "Nim CLI app with nimble, Makefile, flake.nix, tests, and release hooks",
+  description = "Nim CLI app with nimble, .make.lua, flake.nix, tests, and release hooks",
   language = "nim",
   framework = "cli",
   tags = { "builtin", "nim", "cli" },
