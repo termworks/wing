@@ -203,6 +203,8 @@ recipes.</p>
 <tr><td>v</td><td>v</td><td>—</td></tr>
 <tr><td>odin</td><td>odin</td><td>—</td></tr>
 <tr><td>c3</td><td>c3c</td><td>—</td></tr>
+<tr><td>ocaml</td><td>dune</td><td>—</td></tr>
+<tr><td>vala</td><td>meson (valac emits C)</td><td>—</td></tr>
 <tr><td>d</td><td>dub</td><td>—</td></tr>
 <tr><td>haskell</td><td>cabal</td><td>—</td></tr>
 <tr><td>crystal</td><td>crystal + shards</td><td>—</td></tr>
@@ -235,8 +237,9 @@ exist to give. Zig remains the build system for Zig.</p>
 <p>Template placeholders are replaced in both file contents and file names, so
 <code>{{snake_name}}.nimble</code> becomes <code>my_nim_tool.nimble</code>. The set is <code>{{PROJECT_NAME}}</code>,
 <code>{{project_name}}</code>, <code>{{PROJECT-NAME}}</code>, <code>{{project-name}}</code>, <code>{{NAME}}</code>, <code>{{name}}</code>,
-<code>{{kebab_name}}</code>, <code>{{snake_name}}</code> and <code>{{PascalName}}</code> — the last for languages whose identifiers
-must start with a capital, such as a Haskell module.</p>
+<code>{{kebab_name}}</code>, <code>{{snake_name}}</code>, <code>{{PascalName}}</code> and <code>{{Snake_name}}</code> — the last two for
+languages whose identifiers must start with a capital: <code>DemoThing</code> for a Haskell module,
+<code>Demo_thing</code> for an OCaml one.</p>
 <p>Templates live on disk, not inside the binary — see <a href="./config.html">Configuration</a>
 for the roots that are searched and how to add your own.</p>
 <p>Every template shares one common base for files like <code>.env.lua</code>, <code>flake.nix</code>,
