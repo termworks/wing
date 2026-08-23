@@ -298,6 +298,16 @@ recipes.</p>
 <tr><td>python</td><td>pyproject</td><td><code>nix</code> (default), <code>uv</code>, <code>pixi</code>, <code>micromamba</code></td></tr>
 </tbody></table>
 </div>
+<h3 id="a-projects-own-configuration"><a class="header" href="#a-projects-own-configuration">A project's own configuration</a></h3>
+<p>Every generated project gets a <code>make configs</code> recipe. If the checkout has a <code>config/</code> directory, its
+contents are installed into <code>~/.config/&lt;project&gt;/</code> — <code>config/init.lua</code> becomes
+<code>~/.config/myapp/init.lua</code>, <code>config/themes/</code> becomes <code>~/.config/myapp/themes/</code>. A project with no
+<code>config/</code> says so and stops; most have none.</p>
+<p>The <code>config/</code> it installs is the one at the top of the checkout — asked of git, not assumed from
+the working directory — so it works from any directory in the tree. Each entry is mirrored on its
+own, so files you added to the destination yourself are left alone.</p>
+<p>wing installs its own templates the same way: they live in <code>config/templates/</code> in the checkout, and
+<code>make configs</code> puts them in <code>~/.config/wing/templates/</code>.</p>
 <h3 id="releasing"><a class="header" href="#releasing">Releasing</a></h3>
 <p>Every template ships the same <code>.github/workflows/release.yml</code>, and it is the same one in every
 language — only the build command and what goes in the tarball differ.</p>
@@ -423,9 +433,10 @@ returns nothing — wing reads the tables back once every chunk has run.</p>
 </tbody></table>
 </div>
 <p>Templates are <strong>not</strong> carried inside the binary — a fresh install has none until a tree is
-reachable. From a wing checkout, <code>make templates</code> puts them where wing will find them:</p>
-<pre><code class="language-sh">make templates                 # -&gt; $XDG_CONFIG_HOME/wing/templates
-make templates --dest=/opt/wing/templates
+reachable. A wing checkout keeps everything that belongs in the config directory under <code>config/</code>,
+and <code>make configs</code> installs it — <code>config/*</code> becomes <code>~/.config/wing/*</code>:</p>
+<pre><code class="language-sh">make configs                   # config/ -&gt; $XDG_CONFIG_HOME/wing
+make configs --dest=/opt/wing
 </code></pre>
 <p>It mirrors each bundled template individually, so a template of your own sitting in that directory
 is left alone rather than deleted.</p>

@@ -165,9 +165,10 @@ returns nothing — wing reads the tables back once every chunk has run.</p>
 </tbody></table>
 </div>
 <p>Templates are <strong>not</strong> carried inside the binary — a fresh install has none until a tree is
-reachable. From a wing checkout, <code>make templates</code> puts them where wing will find them:</p>
-<pre><code class="language-sh">make templates                 # -&gt; $XDG_CONFIG_HOME/wing/templates
-make templates --dest=/opt/wing/templates
+reachable. A wing checkout keeps everything that belongs in the config directory under <code>config/</code>,
+and <code>make configs</code> installs it — <code>config/*</code> becomes <code>~/.config/wing/*</code>:</p>
+<pre><code class="language-sh">make configs                   # config/ -&gt; $XDG_CONFIG_HOME/wing
+make configs --dest=/opt/wing
 </code></pre>
 <p>It mirrors each bundled template individually, so a template of your own sitting in that directory
 is left alone rather than deleted.</p>
