@@ -37,3 +37,7 @@ make build
 # anywhere else
 oslo make build
 ```
+
+## License
+
+MIT. See [LICENSE](LICENSE).

@@ -179,13 +179,14 @@ Template placeholders are replaced in both file contents and file names, so
 `{{project_name}}`, `{{PROJECT-NAME}}`, `{{project-name}}`, `{{NAME}}`, `{{name}}`,
 `{{kebab_name}}`, `{{snake_name}}`, `{{PascalName}}` and `{{Snake_name}}` — the last two for
 languages whose identifiers must start with a capital: `DemoThing` for a Haskell module,
-`Demo_thing` for an OCaml one.
+`Demo_thing` for an OCaml one. `{{year}}` is the year the project was generated, for the copyright
+line in `LICENSE`.
 
 Templates live on disk, not inside the binary — see [Configuration](./config.md)
 for the roots that are searched and how to add your own.
 
 Every template shares one common base for files like `.env.lua`, `flake.nix`,
-`README.md`, and `.gitignore`; each language directory overlays its
+`README.md`, `LICENSE`, and `.gitignore`; each language directory overlays its
 own source, build, test, and workflow files. Python adds a shared Python base
 plus one selected environment flavour overlay.
 

@@ -1,4 +1,4 @@
-import std/[os, osproc, strutils]
+import std/[os, osproc, strutils, times]
 
 import test_support
 
@@ -555,3 +555,17 @@ let innerOut = checked(wing & "template apply rust " & quoteShell(outerRepo /
     "pkg") & " --name sample_app")
 doAssert not dirExists(outerRepo / "pkg" / ".git"), innerOut
 doAssert innerOut.contains("already under version control"), innerOut
+
+# --- every generated project carries the licence it says it is under ----------
+# Several manifests already declare MIT -- Cargo.toml, dub.json, pyproject.toml, the nimble file --
+# and a declaration with no LICENSE beside it is a claim the repository cannot back up.
+let licenceTarget = "/tmp/wing-templates-licence"
+removeDir(licenceTarget)
+discard checked(wing & "template apply rust " & quoteShell(licenceTarget) &
+    " --name sample_app --no-git")
+let licence = readFile(licenceTarget / "LICENSE")
+doAssert licence.startsWith("MIT License"), licence
+doAssert licence.contains("bresilla (trim.bresilla@bresilla.com)"), licence
+# The copyright year is the year it was generated, not the year the template was written.
+doAssert licence.contains("Copyright (c) " & $now().year), licence
+doAssert not licence.contains("{{"), "the licence should have no placeholders left"

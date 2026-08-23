@@ -1,6 +1,6 @@
 ## Plans and executes a template copy with placeholder substitution.
 
-import std/[os, strutils]
+import std/[os, strutils, times]
 
 import ./templates/manifest
 import ./util
@@ -86,7 +86,10 @@ proc placeholderPairs*(projectName: string): seq[(string, string)] =
     ("{{PascalName}}", pascalCase(projectName)),
     # OCaml derives a module name from a filename by upper-casing the first letter and nothing
     # else, so `demo_thing.ml` is module `Demo_thing`. PascalCase is the wrong shape there.
-    ("{{Snake_name}}", capitalizeFirst(snakeLower))
+    ("{{Snake_name}}", capitalizeFirst(snakeLower)),
+    # For a copyright line, which is the one thing in a generated project that is about when it was
+    # generated rather than what it is.
+    ("{{year}}", $now().year)
   ]
 
 proc inferProjectName*(targetPath: string): string =
