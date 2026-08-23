@@ -17,7 +17,7 @@ jobs:
   release:
     name: release ${{ matrix.artifact }}
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
@@ -30,38 +30,32 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.event.release.tag_name }}
-      - uses: jiro4989/setup-nim-action@v2
-        with:
-          nim-version: "2.2.4"
-      - name: Cache Nim
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.nimble
-            ~/.cache/nim
-          key: ${{ runner.os }}-${{ runner.arch }}-nim-${{ hashFiles('wing.nimble') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ runner.arch }}-nim-
+      # Nim, musl and Lua all come from the flake, so the release binary is built from the same
+      # pins the dev shell uses and there is no second version to keep in step.
+      - uses: DeterminateSystems/nix-installer-action@main
       - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y musl-tools
-          nimble install -y --depsOnly
+        run: nix develop .#ci --command nimble install -y --depsOnly
       - name: Build release binary
         run: |
-          nim c -d:release \
-            --gcc.exe:musl-gcc --gcc.linkerexe:musl-gcc --passL:-static \
-            --out:wing src/wing.nim
-      # A binary that says "static" and comes out dynamic only fails for whoever downloads it,
-      # so the tarball is not built until the ELF has been asked.
+          nix develop .#ci --command bash -c '
+            env WING_LUA="$LUA_MUSL" nim c -d:release \
+              --gcc.exe:"$MUSL_DEV/bin/musl-gcc" \
+              --gcc.linkerexe:"$MUSL_DEV/bin/musl-gcc" \
+              --passL:-static --out:wing src/wing.nim'
+      # A binary that says "static" and comes out dynamic only fails for whoever downloads it, so
+      # the tarball is not built until the ELF has been asked. `ldd` is not enough on its own: it
+      # prints "statically linked" for a binary that still carries an INTERP and will not start.
       - name: Verify the binary is static
         run: |
-          file wing
-          if readelf -l wing | grep -q 'program interpreter' || readelf -d wing | grep -q NEEDED; then
-            echo "::error::wing is dynamically linked; the release must be static"
-            exit 1
-          fi
-          ./wing --version
+          nix develop .#ci --command bash -c '
+            file wing
+            if readelf -l wing | grep -q "program interpreter"; then
+              echo "::error::wing requests a dynamic loader; it is not static"; exit 1
+            fi
+            if readelf -d wing | grep -q NEEDED; then
+              echo "::error::wing has NEEDED entries; it is not static"; exit 1
+            fi
+            ./wing --version'
       - name: Package
         run: tar -czf "${{ matrix.artifact }}.tar.gz" wing
       - name: Upload artifact

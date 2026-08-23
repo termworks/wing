@@ -27,7 +27,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: mlugg/setup-zig@v2
       - name: Build
-        run: make build
+        run: zig build -Doptimize=ReleaseSafe
       - name: Package
         run: tar -czf "${{ matrix.artifact }}.tar.gz" "zig-out/bin/{{kebab_name}}"
       - name: Upload artifact

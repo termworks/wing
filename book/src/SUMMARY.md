@@ -5,6 +5,7 @@
 - [Projects](./projects.md)
 - [Machines](./machines.md)
 - [Templates](./templates.md)
+- [Configuration](./config.md)
 - [Environment](./env.md)
 - [Sync](./sync.md)
 - [TUI](./tui.md)

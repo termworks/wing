@@ -24,9 +24,11 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-nim-
       - name: Install dependencies
-        run: make tidy
+        run: nimble install -y --depsOnly
       - name: Verify
-        run: make verify
+        run: |
+          nim check src/{{snake_name}}.nim
+          nimble test -y
       - name: Build
-        run: make build
+        run: nim c -d:release --out:{{kebab_name}} src/{{snake_name}}.nim
 

@@ -3,10 +3,9 @@
 import std/[os, sequtils, strutils]
 
 import ../apply
-import ../builtins/data
+import ../builtins/registry
 import ../builtins/flavours
 import ../builtins/install
-import ../builtins/paths
 import ../cliargs
 import ../jsonfmt
 import ../store/templates
@@ -61,7 +60,7 @@ proc handleTemplate*(argsIn: seq[string]) =
     rejectUnknownOptions(args)
     case action
     of "list", "ls":
-      printBuiltinTemplates(builtinTemplatesRoot(), raw, asJson)
+      printBuiltinTemplates(raw, asJson)
     of "install", "add", "seed":
       if raw or asJson:
         die("--raw and --json are only valid with wing template builtins list", 2)
@@ -130,9 +129,9 @@ proc handleTemplate*(argsIn: seq[string]) =
         echo "Framework: " & noneIfEmpty(tmpl.framework)
         echo "Tags: " & (if tmpl.tags.len == 0: "None" else: tmpl.tags.join(", "))
         let builtinIndex = templateBuiltinIndex(tmpl)
-        if builtinIndex >= 0 and builtinTemplateFlavours(BuiltinTemplates[
+        if builtinIndex >= 0 and builtinTemplateFlavours(builtinSpecs()[
             builtinIndex]).len > 0:
-          echo "Flavours: " & builtinFlavourSummary(BuiltinTemplates[
+          echo "Flavours: " & builtinFlavourSummary(builtinSpecs()[
               builtinIndex])
         echo "Created: " & displayStamp(tmpl.createdAt)
         echo "Updated: " & displayStamp(tmpl.updatedAt)
@@ -231,6 +230,17 @@ proc handleTemplate*(argsIn: seq[string]) =
 
     let source = templateSourceForFlavour(found, flavour, hasFlavour)
     let renderedName = effectiveProjectName(projectName, targetPath)
+
+    # What a config sees, both for a computed placeholder and for an apply handler. Established
+    # before the plan is built so a dry run reports the same tokens the real apply would write.
+    let context = @[
+      ("template", templateName),
+      ("flavour", source.flavour),
+      ("name", renderedName),
+      ("path", targetPath)
+    ]
+    setExtraPlaceholders(configPlaceholders(context))
+
     let plan = buildTemplatePlan(source.path, targetPath, renderedName,
         allowSymlinks)
     if dryRun:
@@ -250,6 +260,7 @@ proc handleTemplate*(argsIn: seq[string]) =
     let skippedReplacements = applyTemplate(source.path, targetPath,
         renderedName, force, skipExisting, allowSymlinks)
     printList("Skipped placeholder replacements", skippedReplacements)
+    runConfigApplyHandlers(context)
     let flavourSuffix =
       if source.flavour.len > 0: " (flavour: " & source.flavour & ")"
       else: ""

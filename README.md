@@ -9,7 +9,8 @@ wing
 
 - Manage named projects with namespace, path, language, framework, template, and tag metadata.
 - Discover/import projects from existing source trees.
-- Manage reusable file/directory templates and apply them to new target directories with dry-run, conflict, symlink, and bundled-template flavour controls.
+- Manage reusable file/directory templates and apply them to new target directories with dry-run, conflict, symlink, and flavour controls.
+- Templates declare themselves in Lua (`template.lua`) and live on disk, not inside the binary; a `~/.config/wing/init.lua` can add, override, and extend them. See [Configuration](book/src/config.md).
 - Manage SSH machine entries with ProxyJump/agent-forwarding, shared ControlMaster sockets, SSH config generation, TCP/SSH health checks, and connection through stored host/interface metadata.
 - Load project-scoped environment variables from `.envrc` files with a direnv-compatible loader and shell hooks (`wing env`).
 - Sync a registered project to a remote machine over SSH with rsync (`wing sync`).
@@ -73,6 +74,9 @@ wing template apply basic /tmp/my-app --name my_app --dry-run
 wing template apply nim /tmp/my-nim-tool --name my_nim_tool
 wing template apply rust /tmp/my-rust-lib --name my_rust_lib
 wing template apply cpp /tmp/my-cpp-lib --name my_cpp_lib
+wing template apply c /tmp/my-c-lib --name my_c_lib --flavour cmake
+wing template apply v /tmp/my-v-tool --name my_v_tool
+wing template apply d /tmp/my-d-tool --name my_d_tool
 wing template apply python /tmp/my-python-tool --name my_python_tool
 wing template apply python /tmp/my-uv-tool --name my_uv_tool --flavour uv
 wing template apply python /tmp/my-pixi-tool --name my_pixi_tool --flavour pixi

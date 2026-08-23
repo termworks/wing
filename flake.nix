@@ -62,6 +62,36 @@
           ln -s ${nixVulkanTarget} $out/bin/nixVulkan
         '';
 
+        # Lua comes from nixpkgs rather than being vendored, so none of its C source lives in this
+        # repository and the version is pinned by flake.lock like everything else. Both builds are
+        # here because a static binary needs a libc-matched archive: liblua.a from the glibc build
+        # cannot go into a musl link.
+        #
+        # Deliberately env vars rather than `packages` entries. A package puts its headers on the
+        # default search path, and musl's there makes an ordinary `nim c` compile against musl and
+        # link against glibc -- which builds without a word and then segfaults. Only the build that
+        # wants a path is given it: `config.nims` reads WING_LUA and passes the flags itself.
+        buildEnv = {
+          LUA_DEV = pkgs.lua5_4;
+          LUA_MUSL = pkgs.pkgsMusl.lua5_4;
+          MUSL_DEV = pkgs.musl.dev;
+        };
+
+        # Everything needed to compile and check the source, and nothing else. CI enters this
+        # rather than the full shell so it does not pull mdbook, nixGL and git-cliff -- none of
+        # which it uses -- across the network on every job.
+        buildTools = [
+          pkgs.nim
+          pkgs.nimble
+          pkgs.gcc
+          # readelf for the staticness check, and file for the report. readelf is the one that
+          # decides it: ldd prints "statically linked" for a binary that still carries an INTERP
+          # and will not start.
+          pkgs.binutils
+          pkgs.file
+          pkgs.pkg-config
+        ];
+
         guiLibs = with pkgs; [
           alsa-lib
           udev
@@ -75,7 +105,12 @@
         ];
       in
       {
-        devShells.default = pkgs.mkShell {
+        # The Nim version is pinned in exactly one place: this flake, through flake.lock. CI enters
+        # `.#ci` rather than installing a Nim of its own, so there is no second pin that can drift
+        # out from under the formatter and the release build.
+        devShells.ci = pkgs.mkShell (buildEnv // { packages = buildTools; });
+
+        devShells.default = pkgs.mkShell (buildEnv // {
           packages = [
             pkgs.nim
             pkgs.nimble
@@ -98,7 +133,7 @@
           LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath guiLibs;
           WGPU_VALIDATION = "0";
           WGPU_DEBUG = "0";
-        };
+        });
       }
     );
 }

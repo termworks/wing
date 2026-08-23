@@ -13,7 +13,9 @@ jobs:
       - uses: actions/checkout@v4
       - uses: mlugg/setup-zig@v2
       - name: Verify
-        run: make verify
+        run: |
+          zig fmt --check build.zig src
+          zig build test -Doptimize=ReleaseSafe
       - name: Build
-        run: make build
+        run: zig build -Doptimize=ReleaseSafe
 

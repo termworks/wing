@@ -103,6 +103,9 @@ doAssert builtins.contains("zig\tzig\t")
 doAssert builtins.contains("nim\tnim\t")
 doAssert builtins.contains("rust\trust\t")
 doAssert builtins.contains("cpp\tcpp\t")
+doAssert builtins.contains("c\tc\t")
+doAssert builtins.contains("v\tv\t")
+doAssert builtins.contains("d\td\t")
 doAssert builtins.contains("python\tpython\t")
 let builtinDisplay = checked(wing & "template builtins list")
 doAssert builtinDisplay.contains("nix (default), uv, pixi, micromamba")
@@ -144,17 +147,92 @@ doAssert readFile(rustTarget / "examples" / "main.rs").contains(
     "sample_app::name()")
 doAssert readFile(rustTarget / "flake.nix").contains("pkgs.cargo")
 
+# C++ defaults to the xmake flavour: the sources come from base/, the build file from the flavour.
 let cppTarget = "/tmp/wing-templates-builtin-cpp"
 removeDir(cppTarget)
 discard checked(wing & "template apply cpp " & quoteShell(cppTarget) &
     " --name sample_app")
-doAssert fileExists(cppTarget / "CMakeLists.txt")
+doAssert fileExists(cppTarget / "xmake.lua")
+doAssert not fileExists(cppTarget / "CMakeLists.txt")
 doAssert fileExists(cppTarget / "include" / "sample_app" / "sample_app.hpp")
 doAssert fileExists(cppTarget / "src" / "sample_app" / "sample_app.cpp")
 doAssert fileExists(cppTarget / "test" / "basic_test.cpp")
-doAssert readFile(cppTarget / "CMakeLists.txt").contains(
+doAssert readFile(cppTarget / "flake.nix").contains("pkgs.xmake")
+# .make.lua drives the build system; it is not the build system.
+doAssert readFile(cppTarget / ".make.lua").contains("sh.xmake(")
+# musl and static are the default build. The compiler differs by language and it is not taste:
+# musl-clang carries no C++ standard library, so C defaults to clang and C++ defaults to gcc.
+doAssert readFile(cppTarget / ".make.lua").contains(
+    "DEFAULT_TOOLCHAIN = \"gcc\""),
+    "C++ should default to gcc, the only musl toolchain with a C++ standard library"
+doAssert readFile(cppTarget / ".make.lua").contains("MUSL_CC")
+doAssert readFile(cppTarget / "flake.nix").contains("MUSL_CC = pkgs.pkgsMusl.stdenv.cc")
+doAssert readFile(cppTarget / "flake.nix").contains("MUSL_CLANG = pkgs.musl.dev")
+
+# The cmake flavour swaps the build file and the dev shell, and nothing else.
+let cppCmakeTarget = "/tmp/wing-templates-builtin-cpp-cmake"
+removeDir(cppCmakeTarget)
+discard checked(wing & "template apply cpp " & quoteShell(cppCmakeTarget) &
+    " --name sample_app --flavour cmake")
+doAssert fileExists(cppCmakeTarget / "CMakeLists.txt")
+doAssert not fileExists(cppCmakeTarget / "xmake.lua")
+doAssert fileExists(cppCmakeTarget / "src" / "sample_app" / "sample_app.cpp")
+doAssert readFile(cppCmakeTarget / "CMakeLists.txt").contains(
     "src/sample_app/sample_app.cpp")
-doAssert readFile(cppTarget / "flake.nix").contains("pkgs.cmake")
+doAssert readFile(cppCmakeTarget / "flake.nix").contains("pkgs.cmake")
+doAssert readFile(cppCmakeTarget / ".make.lua").contains("sh.cmake(")
+
+# C is the same pair of build systems over C sources.
+let cTarget = "/tmp/wing-templates-builtin-c"
+removeDir(cTarget)
+discard checked(wing & "template apply c " & quoteShell(cTarget) &
+    " --name sample_app")
+doAssert fileExists(cTarget / "xmake.lua")
+doAssert readFile(cTarget / "xmake.lua").contains("set_languages(\"c17\")")
+doAssert fileExists(cTarget / "include" / "sample_app" / "sample_app.h")
+doAssert fileExists(cTarget / "src" / "sample_app.c")
+doAssert fileExists(cTarget / "test" / "basic_test.c")
+doAssert readFile(cTarget / "flake.nix").contains("pkgs.xmake")
+doAssert readFile(cTarget / ".make.lua").contains(
+    "DEFAULT_TOOLCHAIN = \"clang\""),
+    "C should default to clang, which musl-clang supports"
+
+let cCmakeTarget = "/tmp/wing-templates-builtin-c-cmake"
+removeDir(cCmakeTarget)
+discard checked(wing & "template apply c " & quoteShell(cCmakeTarget) &
+    " --name sample_app --flavour cmake")
+doAssert fileExists(cCmakeTarget / "CMakeLists.txt")
+doAssert readFile(cCmakeTarget / "flake.nix").contains("pkgs.cmake")
+
+# V is its own compiler and build system, so it has no flavour to choose.
+let vTarget = "/tmp/wing-templates-builtin-v"
+removeDir(vTarget)
+discard checked(wing & "template apply v " & quoteShell(vTarget) &
+    " --name sample_app")
+doAssert fileExists(vTarget / "v.mod")
+doAssert fileExists(vTarget / "src" / "main.v")
+doAssert fileExists(vTarget / "src" / "main_test.v")
+doAssert readFile(vTarget / "v.mod").contains("name: 'sample_app'")
+doAssert readFile(vTarget / "flake.nix").contains("pkgs.vlang")
+doAssert readFile(vTarget / ".make.lua").contains("sh.v(")
+
+# D builds with dub; the compiler is a choice rather than a flavour.
+let dTarget = "/tmp/wing-templates-builtin-d"
+removeDir(dTarget)
+discard checked(wing & "template apply d " & quoteShell(dTarget) &
+    " --name sample_app")
+doAssert fileExists(dTarget / "dub.json")
+doAssert fileExists(dTarget / "source" / "app.d")
+doAssert fileExists(dTarget / "source" / "sample_app" / "core.d")
+doAssert readFile(dTarget / "dub.json").contains("\"name\": \"sample_app\"")
+doAssert readFile(dTarget / "flake.nix").contains("pkgs.dub")
+doAssert readFile(dTarget / ".make.lua").contains("sh.dub(")
+doAssert readFile(dTarget / ".make.lua").contains("ldc2, dmd or gdc")
+
+# Zig is a build system as well as a language, but only for Zig: it is not a C or C++ flavour.
+let cppZig = run(wing & "template apply cpp /tmp/wing-cpp-zig --name x --flavour zig")
+doAssert cppZig.code != 0
+doAssert cppZig.output.contains("Unknown flavour"), cppZig.output
 
 let pythonTarget = "/tmp/wing-templates-builtin-python"
 removeDir(pythonTarget)
@@ -165,15 +243,16 @@ doAssert fileExists(pythonTarget / "pyproject.toml")
 doAssert fileExists(pythonTarget / "src" / "sample_app" / "__init__.py")
 doAssert fileExists(pythonTarget / "src" / "sample_app" / "__main__.py")
 doAssert fileExists(pythonTarget / "tests" / "test_cli.py")
-doAssert fileExists(pythonTarget / "Makefile")
+doAssert fileExists(pythonTarget / ".make.lua")
+doAssert fileExists(pythonTarget / ".env.lua")
 doAssert not dirExists(pythonTarget / ".venv")
 doAssert not fileExists(pythonTarget / "pixi.toml")
 doAssert not fileExists(pythonTarget / "environment.yml")
 doAssert readFile(pythonTarget / "flake.nix").contains(
     "pkgs.python3.withPackages")
 doAssert not readFile(pythonTarget / "flake.nix").contains("pkgs.uv")
-doAssert readFile(pythonTarget / "Makefile").contains(
-    "pure Nix (no virtualenv)")
+doAssert readFile(pythonTarget / ".make.lua").contains(
+    "There is no virtual environment")
 doAssert readFile(pythonTarget / "README.md").contains(
     "No virtual environment is created")
 
@@ -183,9 +262,9 @@ discard checked(wing & "template apply python " & quoteShell(pythonUvTarget) &
     " --name sample_app --flavour uv")
 doAssert readFile(pythonUvTarget / "flake.nix").contains("pkgs.uv")
 doAssert readFile(pythonUvTarget / "flake.nix").contains("pkgs.python3")
-doAssert readFile(pythonUvTarget / "Makefile").contains("$(UV) sync")
-doAssert readFile(pythonUvTarget / "Makefile").contains(
-    "UV_PYTHON_DOWNLOADS := never")
+doAssert readFile(pythonUvTarget / ".make.lua").contains("sh.uv(\"sync\")")
+doAssert readFile(pythonUvTarget / ".make.lua").contains(
+    "uv owns the local .venv")
 doAssert readFile(pythonUvTarget / "README.md").contains("local `.venv`")
 
 let pythonPixiTarget = "/tmp/wing-templates-builtin-python-pixi"
@@ -194,7 +273,7 @@ discard checked(wing & "template apply python " & quoteShell(pythonPixiTarget) &
     " --name sample_app --flavour=pixi")
 doAssert readFile(pythonPixiTarget / "flake.nix").contains("pkgs.pixi")
 doAssert fileExists(pythonPixiTarget / "pixi.toml")
-doAssert readFile(pythonPixiTarget / "Makefile").contains("$(PIXI) install")
+doAssert readFile(pythonPixiTarget / ".make.lua").contains("sh.pixi(\"install\")")
 
 let pythonMicromambaTarget =
   "/tmp/wing-templates-builtin-python-micromamba"
@@ -204,8 +283,8 @@ discard checked(wing & "template apply python " & quoteShell(
 doAssert readFile(pythonMicromambaTarget / "flake.nix").contains(
     "pkgs.micromamba")
 doAssert fileExists(pythonMicromambaTarget / "environment.yml")
-doAssert readFile(pythonMicromambaTarget / "Makefile").contains(
-    "$(MICROMAMBA) create")
+doAssert readFile(pythonMicromambaTarget / ".make.lua").contains(
+    "sh.micromamba(\"env\", \"update\"")
 
 let unknownFlavour = run(wing & "template apply python /tmp/wing-python-bad " &
     "--flavour conda")
@@ -224,24 +303,18 @@ createDir(initDataHome)
 createDir(initHome)
 let initPrefix = "XDG_DATA_HOME=" & quoteShell(initDataHome) & " HOME=" &
     quoteShell(initHome) & " "
+# Templates are not carried inside the binary any more, so init registers whatever tree it can
+# reach rather than writing one out. Here that is the repository's own templates/, via the cwd.
 let initOutput = checked(initPrefix & quoteShell(Binary) & " init")
 doAssert initOutput.contains("Initialized wing data")
-doAssert fileExists(initDataHome / "wing" / "templates" / "common" /
-    "flake.nix")
-doAssert fileExists(initDataHome / "wing" / "templates" / "nim" /
-    "{{snake_name}}.nimble")
-doAssert fileExists(initDataHome / "wing" / "templates" / "rust" /
-    "Cargo.toml")
-doAssert fileExists(initDataHome / "wing" / "templates" / "cpp" /
-    "CMakeLists.txt")
-doAssert fileExists(initDataHome / "wing" / "templates" / "python" /
-    "base" / "pyproject.toml")
-doAssert fileExists(initDataHome / "wing" / "templates" / "python" /
-    "flavours" / "uv" / "Makefile")
-doAssert fileExists(initDataHome / "wing" / "templates" / "python" /
-    "flavours" / "pixi" / "pixi.toml")
-doAssert fileExists(initDataHome / "wing" / "templates" / "python" /
-    "flavours" / "micromamba" / "environment.yml")
+doAssert initOutput.contains("Declared: 9"), initOutput
+
+# A reachable tree that declares nothing is reported, not treated as a failure.
+let emptyRoot = "/tmp/wing-init-empty-templates"
+resetDir(emptyRoot)
+let bareInit = checked("WING_TEMPLATE_DIR=" & quoteShell(emptyRoot) & " " &
+    initPrefix & quoteShell(Binary) & " init")
+doAssert bareInit.contains("Declared: 0"), bareInit
 let initializedTemplates = checked(initPrefix & quoteShell(Binary) &
     " template list --raw")
 doAssert initializedTemplates.contains("go\tgo\t")

@@ -1,24 +1,22 @@
 ## Flavour resolution and placeholder rendering for bundled templates.
+##
+## Every question here used to be answered by comparing a template's name to "python". A flavour is
+## data now, so a template that declares flavours has them and one that does not, does not.
 
-import std/strutils
+import std/[sequtils, strutils]
 
 import ../types
 import ../util
-import ./data
 
-proc builtinLanguageTitle*(tmpl: BuiltinTemplate): string =
+proc builtinLanguageTitle*(tmpl: TemplateSpec): string =
   if tmpl.language.len == 0:
     return ""
   tmpl.language[0].toUpperAscii() & tmpl.language.substr(1)
 
-proc builtinTemplateFlavours*(tmpl: BuiltinTemplate): seq[string] =
-  result = @[]
-  for flavour in tmpl.flavours.split(","):
-    let cleaned = flavour.strip().toLowerAscii()
-    if cleaned.len > 0:
-      result.add(cleaned)
+proc builtinTemplateFlavours*(tmpl: TemplateSpec): seq[string] =
+  tmpl.flavours.mapIt(it.name)
 
-proc builtinFlavourSummary*(tmpl: BuiltinTemplate): string =
+proc builtinFlavourSummary*(tmpl: TemplateSpec): string =
   let flavours = builtinTemplateFlavours(tmpl)
   if flavours.len == 0:
     return "None"
@@ -30,53 +28,40 @@ proc builtinFlavourSummary*(tmpl: BuiltinTemplate): string =
       labels.add(flavour)
   labels.join(", ")
 
-proc normalizeBuiltinFlavour*(tmpl: BuiltinTemplate;
-    requested: string): string =
+proc normalizeBuiltinFlavour*(tmpl: TemplateSpec; requested: string): string =
   let flavours = builtinTemplateFlavours(tmpl)
   if flavours.len == 0:
     if requested.len > 0:
       die("Template '" & tmpl.name & "' does not support flavours", 2)
     return ""
 
-  result = if requested.len > 0: requested.toLowerAscii() else:
-      tmpl.defaultFlavour
+  result = if requested.len > 0: requested.toLowerAscii() else: tmpl.defaultFlavour
   if not flavours.contains(result):
     die("Unknown flavour '" & requested & "' for template '" & tmpl.name &
         "'. Available flavours: " & flavours.join(", "), 2)
 
-proc builtinFlavourNixPackages*(tmpl: BuiltinTemplate;
-    flavour: string): string =
-  if tmpl.name != "python":
-    return tmpl.nixPackages
-  case flavour
-  of "", "nix":
-    PythonNixPackages
-  of "uv":
-    PythonUvNixPackages
-  of "pixi":
-    PythonPixiNixPackages
-  of "micromamba":
-    PythonMicromambaNixPackages
-  else:
-    tmpl.nixPackages
+proc findFlavour(tmpl: TemplateSpec; flavour: string): int =
+  ## An empty flavour means the default, which is what a template with no request gets.
+  result = -1
+  let wanted = if flavour.len > 0: flavour else: tmpl.defaultFlavour
+  if wanted.len == 0:
+    return
+  for i, entry in tmpl.flavours:
+    if entry.name == wanted:
+      return i
 
-proc builtinEnvironmentDescription*(tmpl: BuiltinTemplate;
-    flavour: string): string =
-  if tmpl.name != "python":
-    return ""
-  case flavour
-  of "", "nix":
-    "Python and all development packages come directly from Nix. No virtual environment is created."
-  of "uv":
-    "Python and uv come from Nix. Run `make setup` to create and sync the local `.venv` managed by uv."
-  of "pixi":
-    "Pixi comes from Nix. Run `make setup` to create and sync the local `.pixi` environment."
-  of "micromamba":
-    "Micromamba comes from Nix. Run `make setup` to create and sync the local `.micromamba` environment."
-  else:
-    ""
+proc builtinFlavourNixPackages*(tmpl: TemplateSpec; flavour: string): string =
+  let idx = findFlavour(tmpl, flavour)
+  if idx >= 0 and tmpl.flavours[idx].nixPackages.len > 0:
+    return tmpl.flavours[idx].nixPackages
+  tmpl.nixPackages
 
-proc renderBuiltinTemplate*(content: string; tmpl: BuiltinTemplate;
+proc builtinEnvironmentDescription*(tmpl: TemplateSpec;
+    flavour: string): string =
+  let idx = findFlavour(tmpl, flavour)
+  if idx >= 0: tmpl.flavours[idx].environment else: ""
+
+proc renderBuiltinTemplate*(content: string; tmpl: TemplateSpec;
     flavour = ""): string =
   content
     .replace("{{builtin_language}}", tmpl.language)
@@ -87,9 +72,5 @@ proc renderBuiltinTemplate*(content: string; tmpl: BuiltinTemplate;
     .replace("{{builtin_environment_description}}",
         builtinEnvironmentDescription(tmpl, flavour))
 
-proc builtinTemplateTags*(tmpl: BuiltinTemplate): seq[string] =
-  result = @[]
-  for tag in tmpl.tags.split(","):
-    let cleaned = tag.strip()
-    if cleaned.len > 0:
-      result.add(cleaned)
+proc builtinTemplateTags*(tmpl: TemplateSpec): seq[string] =
+  tmpl.tags

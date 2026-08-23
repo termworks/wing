@@ -99,20 +99,26 @@ end
 make.recipe{ name = "version", desc = "what this checkout calls itself",
              run = function() print(("%s v%s"):format(NAME, VERSION)) end }
 
--- musl-gcc is deliberately NOT in the dev shell. Adding musl there puts its headers on the
--- default search path, so an ordinary `nim c` compiles against musl and links against glibc --
--- which builds without a word and then segfaults. It is borrowed from nix for this one command.
+-- musl and its Lua are deliberately NOT on the dev shell's search path: headers there make an
+-- ordinary `nim c` compile against musl and link against glibc, which builds without a word and
+-- then segfaults. The flake exports them as paths instead (see its buildEnv), and only this build
+-- is given them.
+--
+-- WING_LUA goes through `env` rather than the recipe's own environment so it reaches this compile
+-- and nothing after it: a test compiled against musl's Lua and linked to glibc is that same bug.
 local function nim_musl()
-  local args = { "c", "-d:release",
-                 "--gcc.exe:musl-gcc", "--gcc.linkerexe:musl-gcc", "--passL:-static",
-                 "--out:" .. BIN, ENTRY }
-  if oslo.run{ "sh", "-c", "command -v musl-gcc", capture = true }.ok then
-    sh.nim(table.unpack(args))
-  else
-    assert(oslo.run{ "sh", "-c", "command -v nix", capture = true }.ok,
-           "the static build needs musl-gcc: install musl-tools, or install nix to borrow one")
-    sh.nix("shell", "nixpkgs#musl.dev", "--command", "nim", table.unpack(args))
-  end
+  local musl = os.getenv("MUSL_DEV") or ""
+  local lua = os.getenv("LUA_MUSL") or ""
+  assert(musl ~= "" and lua ~= "",
+         "the static build needs MUSL_DEV and LUA_MUSL from the dev shell: nix develop .#ci")
+  -- `oslo.run` rather than `sh.env`: oslo answers some commands in rows instead of running them,
+  -- and `env` is one of them -- so `sh.env(...)` returned happily having compiled nothing.
+  local built = oslo.run{ "env", "WING_LUA=" .. lua, "nim", "c", "-d:release",
+                          "--gcc.exe:" .. musl .. "/bin/musl-gcc",
+                          "--gcc.linkerexe:" .. musl .. "/bin/musl-gcc",
+                          "--passL:-static",
+                          "--out:" .. BIN, ENTRY }
+  assert(built.ok, "the static build failed")
 end
 
 -- The one that gets installed and shipped, and what `make build` means. It refuses to finish
@@ -123,7 +129,9 @@ make.recipe{
   desc = "a static binary that needs nothing on the target machine",
   run = function()
     nim_musl()
-    assert(linkage(BIN) == "static", BIN .. " came out dynamic; it must not ship")
+    local kind = linkage(BIN)
+    assert(kind ~= nil, BIN .. " was not produced, or readelf could not read it")
+    assert(kind == "static", BIN .. " came out dynamic; it must not ship")
     report()
   end,
 }
@@ -251,6 +259,48 @@ make.recipe{
   name = "tidy",
   desc = "install the Nim dependencies",
   run = function() sh.nimble("install", "-y", "--depsOnly") end,
+}
+
+-- Templates are not carried inside the binary, so they have to reach the config directory to be
+-- usable outside this checkout. $XDG_CONFIG_HOME/wing/templates is the highest-priority root, so
+-- what lands there is what wing uses.
+--
+-- Written through the config path rather than anywhere more specific: someone whose ~/.config/wing
+-- is a symlink into a dotfiles repo gets the files there, and someone with an ordinary directory
+-- gets them there. Neither case needs to be detected.
+make.recipe{
+  name = "templates",
+  desc = "sync the templates into $XDG_CONFIG_HOME/wing/templates",
+  params = { { "--dest", desc = "somewhere other than the config directory" } },
+  run = function(a)
+    assert(oslo.run{ "sh", "-c", "command -v rsync", capture = true }.ok,
+           "rsync is not installed; install it first")
+
+    local dest = a.dest
+    if not dest then
+      local config = os.getenv("XDG_CONFIG_HOME")
+      if not config or config == "" then config = os.getenv("HOME") .. "/.config" end
+      dest = config .. "/wing/templates"
+    end
+    sh.mkdir("-p", dest)
+
+    -- One template at a time, each mirrored with --delete, rather than one --delete over the whole
+    -- tree. The destination is also where a user keeps templates of their own, and a tree-wide
+    -- mirror would delete every one of them.
+    local synced = 0
+    for _, path in ipairs(oslo.fs.glob("templates/*")) do
+      if oslo.fs.stat(path .. "/") then
+        local name = oslo.path.name(path)
+        sh.mkdir("-p", dest .. "/" .. name)
+        sh.rsync("-a", "--delete", path .. "/", dest .. "/" .. name .. "/")
+        synced = synced + 1
+      end
+    end
+
+    print(oslo.ui.style("✓ ", { fg = "green" }) ..
+          ("%d template(s) -> %s"):format(synced, dest))
+    print(dim("  anything else in that directory is left alone"))
+  end,
 }
 
 make.recipe{
