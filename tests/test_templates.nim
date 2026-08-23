@@ -109,6 +109,8 @@ doAssert builtins.contains("haskell\thaskell\t")
 doAssert builtins.contains("odin\todin\t")
 doAssert builtins.contains("crystal\tcrystal\t")
 doAssert builtins.contains("c3\tc3\t")
+doAssert builtins.contains("ocaml\tocaml\t")
+doAssert builtins.contains("vala\tvala\t")
 doAssert builtins.contains("d\td\t")
 doAssert builtins.contains("python\tpython\t")
 let builtinDisplay = checked(wing & "template builtins list")
@@ -311,7 +313,7 @@ let initPrefix = "XDG_DATA_HOME=" & quoteShell(initDataHome) & " HOME=" &
 # reach rather than writing one out. Here that is the repository's own templates/, via the cwd.
 let initOutput = checked(initPrefix & quoteShell(Binary) & " init")
 doAssert initOutput.contains("Initialized wing data")
-doAssert initOutput.contains("Declared: 13"), initOutput
+doAssert initOutput.contains("Declared: 15"), initOutput
 
 # A reachable tree that declares nothing is reported, not treated as a failure.
 let emptyRoot = "/tmp/wing-init-empty-templates"
@@ -368,8 +370,8 @@ doAssert missing.code != 0
 # --- every bundled template carries logic of its own --------------------------
 # Not decoration: each one generates a flake.nix and a .env.lua that call nix, so a machine without
 # nix produces a project whose dev shell cannot come up. The template is what knows that.
-for name in ["c", "c3", "cpp", "crystal", "d", "go", "haskell", "nim", "odin",
-             "python", "rust", "v", "zig"]:
+for name in ["c", "c3", "cpp", "crystal", "d", "go", "haskell", "nim", "ocaml",
+             "odin", "python", "rust", "v", "vala", "zig"]:
   let logic = "templates" / name / "init.lua"
   doAssert fileExists(logic), name & " should carry an init.lua: " & logic
   doAssert readFile(logic).contains("wing.on.check"),
@@ -431,3 +433,26 @@ doAssert fileExists(c3Target / "test" / "sample_app_test.c3")
 doAssert dirExists(c3Target / "lib"),
     "c3c will not build when its dependency search path is missing"
 doAssert readFile(c3Target / "flake.nix").contains("pkgs.c3c")
+
+# OCaml derives a module name by upper-casing only the first letter of the filename, so the
+# PascalCase placeholder is the wrong shape here and {{Snake_name}} is the right one.
+let mlTarget = "/tmp/wing-templates-builtin-ocaml"
+removeDir(mlTarget)
+discard checked(wing & "template apply ocaml " & quoteShell(mlTarget) &
+    " --name sample_app")
+doAssert fileExists(mlTarget / "lib" / "sample_app.ml")
+doAssert readFile(mlTarget / "bin" / "main.ml").contains("Sample_app."),
+    "an OCaml module reference should be Sample_app, not SampleApp"
+doAssert readFile(mlTarget / "flake.nix").contains("pkgs.ocaml")
+
+# Vala compiles through C, so the dev shell needs a C compiler as well as valac.
+let valaTarget = "/tmp/wing-templates-builtin-vala"
+removeDir(valaTarget)
+discard checked(wing & "template apply vala " & quoteShell(valaTarget) &
+    " --name sample_app")
+doAssert fileExists(valaTarget / "meson.build")
+doAssert fileExists(valaTarget / "src" / "sample_app.vala")
+doAssert readFile(valaTarget / "src" / "sample_app.vala").contains("namespace SampleApp")
+doAssert readFile(valaTarget / "flake.nix").contains("pkgs.vala")
+doAssert readFile(valaTarget / "flake.nix").contains("pkgs.gcc"),
+    "vala emits C, so a C compiler belongs in the dev shell"

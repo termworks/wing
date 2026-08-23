@@ -69,6 +69,8 @@ recipes.
 | v | v | — |
 | odin | odin | — |
 | c3 | c3c | — |
+| ocaml | dune | — |
+| vala | meson (valac emits C) | — |
 | d | dub | — |
 | haskell | cabal | — |
 | crystal | crystal + shards | — |
@@ -110,8 +112,9 @@ exist to give. Zig remains the build system for Zig.
 Template placeholders are replaced in both file contents and file names, so
 `{{snake_name}}.nimble` becomes `my_nim_tool.nimble`. The set is `{{PROJECT_NAME}}`,
 `{{project_name}}`, `{{PROJECT-NAME}}`, `{{project-name}}`, `{{NAME}}`, `{{name}}`,
-`{{kebab_name}}`, `{{snake_name}}` and `{{PascalName}}` — the last for languages whose identifiers
-must start with a capital, such as a Haskell module.
+`{{kebab_name}}`, `{{snake_name}}`, `{{PascalName}}` and `{{Snake_name}}` — the last two for
+languages whose identifiers must start with a capital: `DemoThing` for a Haskell module,
+`Demo_thing` for an OCaml one.
 
 Templates live on disk, not inside the binary — see [Configuration](./config.md)
 for the roots that are searched and how to add your own.

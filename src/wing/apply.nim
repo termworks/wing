@@ -61,6 +61,14 @@ proc pascalCase(value: string): string =
     else:
       result.add(ch)
 
+proc capitalizeFirst(value: string): string =
+  ## `demo_thing` -> `Demo_thing`. OCaml derives a module name from a filename by upper-casing the
+  ## first letter and nothing else, so PascalCase is the wrong shape there.
+  if value.len == 0:
+    return ""
+  result = value
+  result[0] = result[0].toUpperAscii()
+
 proc placeholderPairs*(projectName: string): seq[(string, string)] =
   let kebab = projectName.replace("_", "-")
   let kebabLower = kebab.toLowerAscii()
@@ -75,7 +83,10 @@ proc placeholderPairs*(projectName: string): seq[(string, string)] =
     ("{{NAME}}", projectName.toUpperAscii()),
     ("{{kebab_name}}", kebabLower),
     ("{{snake_name}}", snakeLower),
-    ("{{PascalName}}", pascalCase(projectName))
+    ("{{PascalName}}", pascalCase(projectName)),
+    # OCaml derives a module name from a filename by upper-casing the first letter and nothing
+    # else, so `demo_thing.ml` is module `Demo_thing`. PascalCase is the wrong shape there.
+    ("{{Snake_name}}", capitalizeFirst(snakeLower))
   ]
 
 proc inferProjectName*(targetPath: string): string =
