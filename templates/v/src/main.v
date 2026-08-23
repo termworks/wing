@@ -4,7 +4,7 @@ import os
 
 // The version lives in v.mod; this mirrors it so `--version` has something to print without
 // reading a file at runtime. Keep the two in step when cutting a release.
-const version = '0.1.0'
+const version = '0.6.0'
 
 fn greeting() string {
 	return 'hello from {{kebab_name}}'

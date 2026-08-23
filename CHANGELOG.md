@@ -1,5 +1,34 @@
 # Changelog
 
+## [0.6.0] - 2026-08-23
+
+### <!-- 0 -->⛰️  Features
+
+- Add a make templates recipe to sync into the config dir
+- Report the built artifact from every make build
+- Build c and c++ static against musl by default
+- Default c and c++ to clang, add static musl builds
+- Add v and d templates, default c and c++ to xmake
+- Give c and c++ cmake and xmake flavours
+- Drive generated projects with .make.lua and .env.lua
+- Search every template root, layering common
+- Add user config, placeholders and apply handlers
+- Declare templates in lua, not in nim
+
+### <!-- 1 -->🐛 Bug Fixes
+
+- Build the zig template against zig 0.16
+- Stop release tooling rewriting the nim template version
+- Run the static build instead of listing the environment
+
+### <!-- 3 -->📚 Documentation
+
+- Document the lua config surface
+
+### Build
+
+- Source nim, musl and lua from the flake in CI
+
 ## [0.5.3] - 2026-08-22
 
 ### <!-- 7 -->⚙️ Miscellaneous Tasks
