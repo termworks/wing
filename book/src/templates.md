@@ -67,7 +67,9 @@ recipes.
 | c, cpp | xmake or CMake | `xmake` (default), `cmake` |
 | zig | zig | — |
 | v | v | — |
+| odin | odin | — |
 | d | dub | — |
+| haskell | cabal | — |
 | go, nim, rust | the language's own tool | — |
 | python | pyproject | `nix` (default), `uv`, `pixi`, `micromamba` |
 
@@ -104,7 +106,10 @@ assumes zig-as-compiler and does not drive a host gcc or clang, which is the cho
 exist to give. Zig remains the build system for Zig.
 
 Template placeholders are replaced in both file contents and file names, so
-`{{snake_name}}.nimble` becomes `my_nim_tool.nimble`.
+`{{snake_name}}.nimble` becomes `my_nim_tool.nimble`. The set is `{{PROJECT_NAME}}`,
+`{{project_name}}`, `{{PROJECT-NAME}}`, `{{project-name}}`, `{{NAME}}`, `{{name}}`,
+`{{kebab_name}}`, `{{snake_name}}` and `{{PascalName}}` — the last for languages whose identifiers
+must start with a capital, such as a Haskell module.
 
 Templates live on disk, not inside the binary — see [Configuration](./config.md)
 for the roots that are searched and how to add your own.

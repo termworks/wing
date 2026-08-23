@@ -105,6 +105,8 @@ doAssert builtins.contains("rust\trust\t")
 doAssert builtins.contains("cpp\tcpp\t")
 doAssert builtins.contains("c\tc\t")
 doAssert builtins.contains("v\tv\t")
+doAssert builtins.contains("haskell\thaskell\t")
+doAssert builtins.contains("odin\todin\t")
 doAssert builtins.contains("d\td\t")
 doAssert builtins.contains("python\tpython\t")
 let builtinDisplay = checked(wing & "template builtins list")
@@ -307,7 +309,7 @@ let initPrefix = "XDG_DATA_HOME=" & quoteShell(initDataHome) & " HOME=" &
 # reach rather than writing one out. Here that is the repository's own templates/, via the cwd.
 let initOutput = checked(initPrefix & quoteShell(Binary) & " init")
 doAssert initOutput.contains("Initialized wing data")
-doAssert initOutput.contains("Declared: 9"), initOutput
+doAssert initOutput.contains("Declared: 11"), initOutput
 
 # A reachable tree that declares nothing is reported, not treated as a failure.
 let emptyRoot = "/tmp/wing-init-empty-templates"
@@ -364,7 +366,8 @@ doAssert missing.code != 0
 # --- every bundled template carries logic of its own --------------------------
 # Not decoration: each one generates a flake.nix and a .env.lua that call nix, so a machine without
 # nix produces a project whose dev shell cannot come up. The template is what knows that.
-for name in ["c", "cpp", "d", "go", "nim", "python", "rust", "v", "zig"]:
+for name in ["c", "cpp", "d", "go", "haskell", "nim", "odin", "python", "rust",
+             "v", "zig"]:
   let logic = "templates" / name / "init.lua"
   doAssert fileExists(logic), name & " should carry an init.lua: " & logic
   doAssert readFile(logic).contains("wing.on.check"),
@@ -382,3 +385,24 @@ doAssert withoutNix.output.contains("nix is not installed"), withoutNix.output
 doAssert fileExists(noNixTarget / "flake.nix"),
     "the flake belongs to the set even when nix is absent"
 doAssert not fileExists(noNixTarget / "init.lua")
+
+# --- Haskell needs a PascalCase module name, which the raw project name is not ---
+let hsTarget = "/tmp/wing-templates-builtin-haskell"
+removeDir(hsTarget)
+discard checked(wing & "template apply haskell " & quoteShell(hsTarget) &
+    " --name sample_app")
+doAssert fileExists(hsTarget / "src" / "SampleApp.hs"),
+    "{{PascalName}} should render a module name Haskell will accept"
+doAssert readFile(hsTarget / "src" / "SampleApp.hs").contains("module SampleApp")
+doAssert readFile(hsTarget / "sample-app.cabal").contains("exposed-modules:  SampleApp")
+doAssert readFile(hsTarget / "flake.nix").contains("pkgs.ghc")
+
+let odinTarget = "/tmp/wing-templates-builtin-odin"
+removeDir(odinTarget)
+discard checked(wing & "template apply odin " & quoteShell(odinTarget) &
+    " --name sample_app")
+doAssert fileExists(odinTarget / "src" / "main.odin")
+doAssert fileExists(odinTarget / "src" / "main_test.odin")
+doAssert readFile(odinTarget / "flake.nix").contains("pkgs.odin")
+# odinfmt ships with ols, not odin, so the dev shell has to bring both.
+doAssert readFile(odinTarget / "flake.nix").contains("pkgs.ols")

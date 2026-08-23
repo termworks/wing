@@ -47,6 +47,20 @@ proc keepFile(rel: string): bool =
     return false
   if fileFilter == nil: true else: fileFilter(rel)
 
+proc pascalCase(value: string): string =
+  ## `demo_thing` -> `DemoThing`. Languages whose identifiers must start with a capital -- a
+  ## Haskell module, a C# class -- cannot use the raw project name, and lowercasing it is not the
+  ## answer either.
+  var atWordStart = true
+  for ch in value:
+    if ch in {'_', '-', ' ', '.'}:
+      atWordStart = true
+    elif atWordStart:
+      result.add(ch.toUpperAscii())
+      atWordStart = false
+    else:
+      result.add(ch)
+
 proc placeholderPairs*(projectName: string): seq[(string, string)] =
   let kebab = projectName.replace("_", "-")
   let kebabLower = kebab.toLowerAscii()
@@ -60,7 +74,8 @@ proc placeholderPairs*(projectName: string): seq[(string, string)] =
     ("{{name}}", projectName),
     ("{{NAME}}", projectName.toUpperAscii()),
     ("{{kebab_name}}", kebabLower),
-    ("{{snake_name}}", snakeLower)
+    ("{{snake_name}}", snakeLower),
+    ("{{PascalName}}", pascalCase(projectName))
   ]
 
 proc inferProjectName*(targetPath: string): string =
