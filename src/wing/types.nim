@@ -56,6 +56,9 @@ type
     framework*: string
     tags*: seq[string]
     nixPackages*: string
+    # What the dev shell gives you, in a sentence. A flavourless template says it here; one with
+    # flavours says it per flavour, because that is what differs between them.
+    environment*: string
     flavours*: seq[TemplateFlavour]
     defaultFlavour*: string
 

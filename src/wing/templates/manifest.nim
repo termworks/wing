@@ -74,6 +74,7 @@ proc readSpecs*(L: LuaState): seq[TemplateSpec] =
         framework: fieldStr(L, spec, "framework", ""),
         tags: fieldStrSeq(L, spec, "tags"),
         nixPackages: fieldStr(L, spec, "nix_packages", ""),
+        environment: fieldStr(L, spec, "environment", ""),
         flavours: readFlavours(L, spec),
         defaultFlavour: fieldStr(L, spec, "default_flavour", "")
       ))
