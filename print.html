@@ -298,6 +298,27 @@ recipes.</p>
 <tr><td>python</td><td>pyproject</td><td><code>nix</code> (default), <code>uv</code>, <code>pixi</code>, <code>micromamba</code></td></tr>
 </tbody></table>
 </div>
+<h3 id="releasing"><a class="header" href="#releasing">Releasing</a></h3>
+<p>Every template ships the same <code>.github/workflows/release.yml</code>, and it is the same one in every
+language — only the build command and what goes in the tarball differ.</p>
+<pre><code class="language-sh">make release --type patch    # bump, changelog, commit, tag, push
+</code></pre>
+<p>Pushing the <code>v*</code> tag is the whole release. The workflow then:</p>
+<ol>
+<li>builds on <code>ubuntu-latest</code> and <code>ubuntu-24.04-arm</code>, <strong>inside the project's own flake</strong> — the
+binary that ships was compiled by the toolchain the dev shell hands you, and a second pin in the
+workflow would be a second thing to keep in step;</li>
+<li>packages <code>&lt;name&gt;-&lt;version&gt;-linux-&lt;arch&gt;.tar.gz</code> with the artifact, <code>README</code> and <code>LICENSE</code>;</li>
+<li>checksums every asset into one <code>SHA256SUMS</code>;</li>
+<li>creates the release the tag points at — it does not wait for one to exist — and uploads.</li>
+</ol>
+<p>What lands in the tarball is whatever the project produces: the binary for an application, the
+static library and its headers for the C and C++ templates, the <code>.crate</code> for Rust, and the wheel
+and sdist for Python.</p>
+<p>Two templates build for amd64 only: Carbon publishes a prebuilt x86_64 nightly and Mojo a linux-64
+conda package, so there is no arm64 toolchain for the flake to unpack.</p>
+<p><code>workflow_dispatch</code> takes an existing tag, for rebuilding an asset that failed without cutting
+another release.</p>
 <h3 id="a-generated-project-is-a-repository"><a class="header" href="#a-generated-project-is-a-repository">A generated project is a repository</a></h3>
 <p><code>wing template apply</code> finishes by running <code>git init</code>, staging what it wrote, and <code>git flow init -d --preset=classic</code>, so a new project starts on <code>develop</code> with <code>main</code> beside it, the <code>feature/</code>,
 <code>release/</code> and <code>hotfix/</code> prefixes configured, and one commit holding the generated files. The
