@@ -195,8 +195,8 @@ reproducible build and a test both want.</p>
 overwriting the last. Roots add one more dimension to that same stack: <strong>every</strong> root's <code>common/</code>
 applies, in search order.</p>
 <p>That means overriding one shared file is dropping one file. Put a <code>flake.nix</code> in
-<code>~/.config/wing/templates/common/</code> and it beats the bundled one, while <code>.gitignore</code>, <code>PROJECT</code> and
-<code>README.md</code> still come from the bundled tree.</p>
+<code>~/.config/wing/templates/common/</code> and it beats the bundled one, while <code>.gitignore</code>, <code>LICENSE</code>
+and <code>README.md</code> still come from the bundled tree.</p>
 <p>A <code>common/</code> is shared extras, not a requirement — a template that only has its own files works.</p>
 <h2 id="declaring-a-template"><a class="header" href="#declaring-a-template">Declaring a template</a></h2>
 <pre><code class="language-lua">local wing = require("wing")
