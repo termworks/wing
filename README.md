@@ -80,6 +80,8 @@ wing template apply v /tmp/my-v-tool --name my_v_tool
 wing template apply d /tmp/my-d-tool --name my_d_tool
 wing template apply haskell /tmp/my-hs-tool --name my_hs_tool
 wing template apply odin /tmp/my-odin-tool --name my_odin_tool
+wing template apply crystal /tmp/my-cr-tool --name my_cr_tool
+wing template apply c3 /tmp/my-c3-tool --name my_c3_tool
 wing template apply python /tmp/my-python-tool --name my_python_tool
 wing template apply python /tmp/my-uv-tool --name my_uv_tool --flavour uv
 wing template apply python /tmp/my-pixi-tool --name my_pixi_tool --flavour pixi

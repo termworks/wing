@@ -68,8 +68,10 @@ recipes.
 | zig | zig | — |
 | v | v | — |
 | odin | odin | — |
+| c3 | c3c | — |
 | d | dub | — |
 | haskell | cabal | — |
+| crystal | crystal + shards | — |
 | go, nim, rust | the language's own tool | — |
 | python | pyproject | `nix` (default), `uv`, `pixi`, `micromamba` |
 

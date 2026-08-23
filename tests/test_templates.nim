@@ -107,6 +107,8 @@ doAssert builtins.contains("c\tc\t")
 doAssert builtins.contains("v\tv\t")
 doAssert builtins.contains("haskell\thaskell\t")
 doAssert builtins.contains("odin\todin\t")
+doAssert builtins.contains("crystal\tcrystal\t")
+doAssert builtins.contains("c3\tc3\t")
 doAssert builtins.contains("d\td\t")
 doAssert builtins.contains("python\tpython\t")
 let builtinDisplay = checked(wing & "template builtins list")
@@ -309,7 +311,7 @@ let initPrefix = "XDG_DATA_HOME=" & quoteShell(initDataHome) & " HOME=" &
 # reach rather than writing one out. Here that is the repository's own templates/, via the cwd.
 let initOutput = checked(initPrefix & quoteShell(Binary) & " init")
 doAssert initOutput.contains("Initialized wing data")
-doAssert initOutput.contains("Declared: 11"), initOutput
+doAssert initOutput.contains("Declared: 13"), initOutput
 
 # A reachable tree that declares nothing is reported, not treated as a failure.
 let emptyRoot = "/tmp/wing-init-empty-templates"
@@ -366,8 +368,8 @@ doAssert missing.code != 0
 # --- every bundled template carries logic of its own --------------------------
 # Not decoration: each one generates a flake.nix and a .env.lua that call nix, so a machine without
 # nix produces a project whose dev shell cannot come up. The template is what knows that.
-for name in ["c", "cpp", "d", "go", "haskell", "nim", "odin", "python", "rust",
-             "v", "zig"]:
+for name in ["c", "c3", "cpp", "crystal", "d", "go", "haskell", "nim", "odin",
+             "python", "rust", "v", "zig"]:
   let logic = "templates" / name / "init.lua"
   doAssert fileExists(logic), name & " should carry an init.lua: " & logic
   doAssert readFile(logic).contains("wing.on.check"),
@@ -406,3 +408,26 @@ doAssert fileExists(odinTarget / "src" / "main_test.odin")
 doAssert readFile(odinTarget / "flake.nix").contains("pkgs.odin")
 # odinfmt ships with ols, not odin, so the dev shell has to bring both.
 doAssert readFile(odinTarget / "flake.nix").contains("pkgs.ols")
+
+# Crystal compiles to a native binary, so it belongs here with the rest.
+let crTarget = "/tmp/wing-templates-builtin-crystal"
+removeDir(crTarget)
+discard checked(wing & "template apply crystal " & quoteShell(crTarget) &
+    " --name sample_app")
+doAssert fileExists(crTarget / "shard.yml")
+doAssert fileExists(crTarget / "src" / "sample_app.cr")
+doAssert fileExists(crTarget / "spec" / "sample_app_spec.cr")
+doAssert readFile(crTarget / "src" / "sample_app.cr").contains("module SampleApp")
+doAssert readFile(crTarget / "flake.nix").contains("pkgs.crystal")
+
+let c3Target = "/tmp/wing-templates-builtin-c3"
+removeDir(c3Target)
+discard checked(wing & "template apply c3 " & quoteShell(c3Target) &
+    " --name sample_app")
+doAssert fileExists(c3Target / "project.json")
+doAssert fileExists(c3Target / "src" / "main.c3")
+doAssert fileExists(c3Target / "test" / "sample_app_test.c3")
+# project.json names lib/ as a dependency search path, and c3c refuses to build without it.
+doAssert dirExists(c3Target / "lib"),
+    "c3c will not build when its dependency search path is missing"
+doAssert readFile(c3Target / "flake.nix").contains("pkgs.c3c")
