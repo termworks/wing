@@ -1,4 +1,4 @@
-import std/[os, strutils]
+import std/[os, osproc, strutils, times]
 
 import test_support
 
@@ -312,7 +312,7 @@ createDir(initHome)
 let initPrefix = "XDG_DATA_HOME=" & quoteShell(initDataHome) & " HOME=" &
     quoteShell(initHome) & " "
 # Templates are not carried inside the binary any more, so init registers whatever tree it can
-# reach rather than writing one out. Here that is the repository's own templates/, via the cwd.
+# reach rather than writing one out. Here that is the repository's own config/templates/, via the cwd.
 let initOutput = checked(initPrefix & quoteShell(Binary) & " init")
 doAssert initOutput.contains("Initialized wing data")
 doAssert initOutput.contains("Declared: 17"), initOutput
@@ -374,7 +374,7 @@ doAssert missing.code != 0
 # nix produces a project whose dev shell cannot come up. The template is what knows that.
 for name in ["c", "c3", "carbon", "cpp", "crystal", "d", "go", "haskell", "mojo",
              "nim", "ocaml", "odin", "python", "rust", "v", "vala", "zig"]:
-  let logic = "templates" / name / "init.lua"
+  let logic = "config" / "templates" / name / "init.lua"
   doAssert fileExists(logic), name & " should carry an init.lua: " & logic
   doAssert readFile(logic).contains("wing.on.check"),
       name & "'s init.lua should register a check"
@@ -410,8 +410,9 @@ discard checked(wing & "template apply odin " & quoteShell(odinTarget) &
 doAssert fileExists(odinTarget / "src" / "main.odin")
 doAssert fileExists(odinTarget / "src" / "main_test.odin")
 doAssert readFile(odinTarget / "flake.nix").contains("pkgs.odin")
-# odinfmt ships with ols, not odin, so the dev shell has to bring both.
-doAssert readFile(odinTarget / "flake.nix").contains("pkgs.ols")
+# ols -- and with it odinfmt -- is deliberately absent: it does not build against the Odin this
+# pin provides, and a package that fails to build takes the whole dev shell with it.
+doAssert not readFile(odinTarget / "flake.nix").contains("pkgs.ols")
 
 # Crystal compiles to a native binary, so it belongs here with the rest.
 let crTarget = "/tmp/wing-templates-builtin-crystal"
@@ -493,3 +494,120 @@ doAssert mojoFlake.contains("conda.modular.com"), mojoFlake
 doAssert mojoFlake.contains("mblack"), mojoFlake
 doAssert mojoFlake.contains("MODULAR_HOME"),
     "the compiler needs a writable MODULAR_HOME, which the store path is not"
+
+# --- a generated project keeps its version where its language already keeps it ---
+# There is no version file of wing's own: `veri`, the bumper behind `make release`, reads each
+# language's own manifest, and a file invented here would be one more copy for nothing to update.
+for name in ["c", "c3", "carbon", "cpp", "crystal", "d", "go", "haskell", "mojo",
+             "nim", "ocaml", "odin", "python", "rust", "v", "vala", "zig"]:
+  doAssert not fileExists("config" / "templates" / name / "PROJECT"),
+      name & " should not carry a PROJECT file"
+doAssert not fileExists("config" / "templates" / "common" / "PROJECT"),
+    "the shared base should not carry a PROJECT file either"
+
+for recipes in walkDirRec("config" / "templates"):
+  if recipes.extractFilename != ".make.lua":
+    continue
+  let text = readFile(recipes)
+  doAssert not text.contains("oslo.fs.read(\"PROJECT\")"),
+      recipes & " still reads a PROJECT file"
+  # Either a manifest is read, or the version comes from the tag `make release` creates.
+  doAssert text.contains("oslo.fs.read(") or text.contains(
+      "git\", \"describe\""), recipes & " should read a version from somewhere"
+
+# The version each template reports is the one its own manifest carries.
+let verTarget = "/tmp/wing-templates-version"
+removeDir(verTarget)
+discard checked(wing & "template apply rust " & quoteShell(verTarget) & " --name sample_app")
+doAssert readFile(verTarget / "Cargo.toml").contains("version = \"0.1.0\"")
+doAssert not fileExists(verTarget / "PROJECT"),
+    "a generated project should have no PROJECT file"
+
+# --- a generated project arrives under version control ------------------------
+# The recipes assume it: `make release` runs git-rel, which works on `develop` and nowhere else, so
+# a project that is only loose files is one `git flow init` short of its own release recipe.
+let repoTarget = "/tmp/wing-templates-repo"
+removeDir(repoTarget)
+let repoOut = checked(wing & "template apply rust " & quoteShell(repoTarget) &
+    " --name sample_app")
+doAssert dirExists(repoTarget / ".git"), repoOut
+if repoOut.contains("were not created"):
+  # No git-flow, or no author identity to commit with: the repository is still created, and the
+  # line says which of the two it was rather than leaving a half-made project unexplained.
+  doAssert repoOut.contains("Initialized a git repository"), repoOut
+else:
+  doAssert repoOut.contains("git-flow (main, develop)"), repoOut
+  let branch = execCmdEx("git -C " & quoteShell(repoTarget) &
+      " rev-parse --abbrev-ref HEAD").output.strip()
+  doAssert branch == "develop", "a new project should start on develop, not " & branch
+
+# Tracked, not merely written. A flake only sees files git knows about, so in a repository where
+# nothing is tracked `nix develop` fails on flake.nix -- and every generated project brings up its
+# dev shell from .env.lua. This is why the repository is not left empty.
+doAssert execCmdEx("git -C " & quoteShell(repoTarget) &
+    " ls-files flake.nix").output.strip() == "flake.nix",
+    "flake.nix has to be tracked or the dev shell cannot come up"
+
+# --no-git leaves it alone, for generating into something that is not a project of its own.
+let bareTarget = "/tmp/wing-templates-repo-none"
+removeDir(bareTarget)
+discard checked(wing & "template apply rust " & quoteShell(bareTarget) &
+    " --name sample_app --no-git")
+doAssert not dirExists(bareTarget / ".git"), "--no-git should not create a repository"
+
+# Generating inside a checkout does not nest a second repository in it.
+let outerRepo = "/tmp/wing-templates-repo-outer"
+resetDir(outerRepo)
+doAssert execCmdEx("git init -q " & quoteShell(outerRepo)).exitCode == 0
+let innerOut = checked(wing & "template apply rust " & quoteShell(outerRepo /
+    "pkg") & " --name sample_app")
+doAssert not dirExists(outerRepo / "pkg" / ".git"), innerOut
+doAssert innerOut.contains("already under version control"), innerOut
+
+# --- every generated project carries the licence it says it is under ----------
+# Several manifests already declare MIT -- Cargo.toml, dub.json, pyproject.toml, the nimble file --
+# and a declaration with no LICENSE beside it is a claim the repository cannot back up.
+let licenceTarget = "/tmp/wing-templates-licence"
+removeDir(licenceTarget)
+discard checked(wing & "template apply rust " & quoteShell(licenceTarget) &
+    " --name sample_app --no-git")
+let licence = readFile(licenceTarget / "LICENSE")
+doAssert licence.startsWith("MIT License"), licence
+doAssert licence.contains("bresilla (trim.bresilla@bresilla.com)"), licence
+# The copyright year is the year it was generated, not the year the template was written.
+doAssert licence.contains("Copyright (c) " & $now().year), licence
+doAssert not licence.contains("{{"), "the licence should have no placeholders left"
+
+# --- every template releases the same way --------------------------------------
+# One shape everywhere: a `v*` tag is the trigger, the build happens inside the project's own
+# flake, and the assets are checksummed and attached to a release created by the run itself. A
+# template whose release workflow only compiles publishes nothing, which is how a tag ends up with
+# no binary behind it.
+var releaseWorkflows = 0
+for workflow in walkDirRec("config" / "templates"):
+  if workflow.extractFilename != "release.yml":
+    continue
+  releaseWorkflows.inc
+  let text = readFile(workflow)
+  doAssert text.contains("tags: [\"v*\"]"), workflow & " should fire on any v* tag"
+  doAssert text.contains("nix develop --impure"),
+      workflow & " should build inside the project's own flake"
+  doAssert text.contains("nix-installer-action"), workflow & " should install nix"
+  doAssert text.contains("sha256sum"), workflow & " should checksum what it publishes"
+  doAssert text.contains("gh release create"),
+      workflow & " should create the release the tag points at"
+  doAssert not text.contains("release:\n    types:"),
+      workflow & " should not wait for a release to be made by hand"
+doAssert releaseWorkflows == 22,
+    "every template and flavour needs a release workflow, found " & $releaseWorkflows
+
+# --- every template can install a project's own configuration -----------------
+# One convention: `config/` in a checkout becomes `~/.config/<project>/`. wing installs its own
+# templates that way too, which is why they live in config/templates rather than at the top.
+for recipes in walkDirRec("config" / "templates"):
+  if recipes.extractFilename != ".make.lua":
+    continue
+  let text = readFile(recipes)
+  doAssert text.contains("name = \"configs\""), recipes & " should have a configs recipe"
+  doAssert text.contains("rev-parse"),
+      recipes & "'s configs recipe should find the project root rather than assume the cwd"

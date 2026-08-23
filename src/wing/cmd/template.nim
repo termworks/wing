@@ -7,6 +7,7 @@ import ../builtins/registry
 import ./plugin
 import ../builtins/flavours
 import ../builtins/install
+import ../repo
 import ../cliargs
 import ../jsonfmt
 import ../store/templates
@@ -216,9 +217,11 @@ proc handleTemplate*(argsIn: seq[string]) =
     let force = popFlag(args, ["--force"])
     let skipExisting = popFlag(args, ["--skip-existing"])
     let allowSymlinks = popFlag(args, ["--allow-symlinks"])
+    let noGit = popFlag(args, ["--no-git"])
     rejectUnknownOptions(args)
     requireArgs(args, 2,
-        "wing template apply TEMPLATE TARGET_PATH [--name PROJECT_NAME] [--flavour FLAVOUR]")
+        "wing template apply TEMPLATE TARGET_PATH [--name PROJECT_NAME] " &
+        "[--flavour FLAVOUR] [--no-git]")
     if force and skipExisting:
       die("--force and --skip-existing cannot be used together", 2)
     let templateName = args[0]
@@ -276,6 +279,11 @@ proc handleTemplate*(argsIn: seq[string]) =
     let skippedReplacements = applyTemplate(source.path, targetPath,
         renderedName, force, skipExisting, allowSymlinks)
     printList("Skipped placeholder replacements", skippedReplacements)
+    if not noGit:
+      let repo = setupRepository(targetPath)
+      let said = describe(repo)
+      if said.len > 0:
+        echo said
     runConfigApplyHandlers(context)
     let flavourSuffix =
       if source.flavour.len > 0: " (flavour: " & source.flavour & ")"

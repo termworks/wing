@@ -1,12 +1,15 @@
 name: release
 
+# Any `v*` tag publishes. `make release` cuts one and pushes it, so a release is one command and
+# there is no release to open by hand first -- a tag pushed but never published is the failure this
+# avoids, and it is the same trigger every generated project gets.
 on:
-  release:
-    types: [created]
+  push:
+    tags: ["v*"]
   workflow_dispatch:
     inputs:
       tag:
-        description: Release tag to build and upload artifacts for
+        description: Existing tag to build and upload artifacts for
         required: true
         type: string
 
@@ -29,7 +32,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.event.release.tag_name }}
+          ref: ${{ inputs.tag || github.ref }}
       # Nim, musl and Lua all come from the flake, so the release binary is built from the same
       # pins the dev shell uses and there is no second version to keep in step.
       - uses: DeterminateSystems/nix-installer-action@main
@@ -58,10 +61,17 @@ jobs:
             ./wing --version'
       - name: Package
         run: tar -czf "${{ matrix.artifact }}.tar.gz" wing
-      - name: Upload artifact
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.event.release.tag_name }}
-          files: ${{ matrix.artifact }}.tar.gz
-          fail_on_unmatched_files: true
-          overwrite_files: true
+      # A tag is the trigger, so on the first run there is no release behind it yet: it is created
+      # here rather than by hand, and reused on a re-run so a rebuilt asset replaces the old one.
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag='${{ inputs.tag || github.ref_name }}'
+          repo='${{ github.repository }}'
+          sha256sum '${{ matrix.artifact }}.tar.gz' > '${{ matrix.artifact }}.sha256'
+          gh release view "$tag" --repo "$repo" >/dev/null 2>&1 \
+            || gh release create "$tag" --repo "$repo" --title "$tag" --generate-notes
+          gh release upload "$tag" '${{ matrix.artifact }}.tar.gz' '${{ matrix.artifact }}.sha256' \
+            --clobber --repo "$repo"

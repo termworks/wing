@@ -26,6 +26,9 @@ proc templateRoots*(): seq[string] =
   let candidates = @[
     appDir / ".." / "share" / "wing" / "templates",
     appDir / "templates",
+    # A checkout keeps everything that belongs in the config directory under `config/`, which is
+      # what `make configs` installs; an installed tree has the templates directly beside the binary.
+    getCurrentDir() / "config" / "templates",
     getCurrentDir() / "templates",
     dataRoot() / "templates",
     userTemplatesRoot()
