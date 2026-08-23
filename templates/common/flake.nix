@@ -92,7 +92,11 @@
           # As a package its headers land on the default search path, and an ordinary build then
           # compiles against musl while linking against glibc -- which succeeds without a word and
           # crashes at startup. Only the static build is given it: .make.lua reads MUSL_CC.
+          # gcc targeting musl, which is the only one of the two that has a C++ standard library.
           MUSL_CC = pkgs.pkgsMusl.stdenv.cc;
+          # musl-clang: the host clang, pointed at musl's headers and libs. C only -- it has no
+          # libstdc++, so a C++ build against it fails on the first #include <string>.
+          MUSL_CLANG = pkgs.musl.dev;
 
           LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath guiLibs;
           WGPU_VALIDATION = "0";

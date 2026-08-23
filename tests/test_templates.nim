@@ -160,10 +160,14 @@ doAssert fileExists(cppTarget / "test" / "basic_test.cpp")
 doAssert readFile(cppTarget / "flake.nix").contains("pkgs.xmake")
 # .make.lua drives the build system; it is not the build system.
 doAssert readFile(cppTarget / ".make.lua").contains("sh.xmake(")
-# clang is the default compiler, and the shipped build is static musl.
-doAssert readFile(cppTarget / ".make.lua").contains("or \"clang\""), "clang should be the default"
+# musl and static are the default build. The compiler differs by language and it is not taste:
+# musl-clang carries no C++ standard library, so C defaults to clang and C++ defaults to gcc.
+doAssert readFile(cppTarget / ".make.lua").contains(
+    "DEFAULT_TOOLCHAIN = \"gcc\""),
+    "C++ should default to gcc, the only musl toolchain with a C++ standard library"
 doAssert readFile(cppTarget / ".make.lua").contains("MUSL_CC")
 doAssert readFile(cppTarget / "flake.nix").contains("MUSL_CC = pkgs.pkgsMusl.stdenv.cc")
+doAssert readFile(cppTarget / "flake.nix").contains("MUSL_CLANG = pkgs.musl.dev")
 
 # The cmake flavour swaps the build file and the dev shell, and nothing else.
 let cppCmakeTarget = "/tmp/wing-templates-builtin-cpp-cmake"
@@ -189,6 +193,9 @@ doAssert fileExists(cTarget / "include" / "sample_app" / "sample_app.h")
 doAssert fileExists(cTarget / "src" / "sample_app.c")
 doAssert fileExists(cTarget / "test" / "basic_test.c")
 doAssert readFile(cTarget / "flake.nix").contains("pkgs.xmake")
+doAssert readFile(cTarget / ".make.lua").contains(
+    "DEFAULT_TOOLCHAIN = \"clang\""),
+    "C should default to clang, which musl-clang supports"
 
 let cCmakeTarget = "/tmp/wing-templates-builtin-c-cmake"
 removeDir(cCmakeTarget)

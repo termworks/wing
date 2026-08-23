@@ -75,24 +75,95 @@ make.recipe{
   end,
 }
 
+------------------------------------------------------------------- toolchain
+
+-- musl and static by default: what you build here is what you can copy to another machine. A
+-- binary linked against the host libc stops working the moment that libc differs.
+--
+-- The default compiler differs by language and it is not a preference. musl-clang is the host
+-- clang pointed at musl, and it carries no C++ standard library -- fine for C, and it dies on the
+-- first `#include <string>`. The gcc that nixpkgs builds against musl has one. So C defaults to
+-- clang, C++ defaults to gcc, and both are static.
+--
+-- Both toolchains arrive from the flake as paths rather than packages: musl headers on the default
+-- search path make an ordinary build compile against musl and link against glibc, which succeeds
+-- without a word and crashes at startup.
+local DEFAULT_TOOLCHAIN = "gcc"
+
+local function musl_root(name, why)
+  local root = os.getenv(name) or ""
+  assert(root ~= "", why .. " -- " .. name .. " comes from the dev shell: nix develop")
+  return root
+end
+
+-- Returns cc, cxx, and whether the result will be static.
+local function toolchain(a)
+  local chain = a and a.toolchain or os.getenv("TOOLCHAIN") or DEFAULT_TOOLCHAIN
+  if a and a.dynamic then
+    -- The fast inner loop: the host toolchain, linked the ordinary way.
+    if chain == "gcc" then return "gcc", "g++", false end
+    return "clang", "clang++", false
+  end
+  if chain == "clang" then
+    assert(not true,
+           "musl-clang has no C++ standard library, so a static clang build cannot work here.\n" ..
+           "Use `--toolchain gcc` for the static build, or `--dynamic` to iterate with clang.")
+    local root = musl_root("MUSL_CLANG", "the static clang build needs musl")
+    return root .. "/bin/musl-clang", root .. "/bin/musl-clang", true
+  end
+  local root = musl_root("MUSL_CC", "the static build needs a musl gcc")
+  return root .. "/bin/gcc", root .. "/bin/g++", true
+end
+
+-- Asked of the ELF, not assumed. "static" quietly coming out dynamic is only ever noticed by
+-- whoever the binary fails for. `ldd` is not enough: it prints "statically linked" for a binary
+-- that still carries an INTERP and will not start.
+local function assert_static(path)
+  local segments = oslo.run{ "readelf", "-l", path, capture = true }
+  local dynamic = oslo.run{ "readelf", "-d", path, capture = true }
+  assert(segments.ok, path .. " was not produced, or readelf could not read it")
+  assert(not (segments.out or ""):find("program interpreter"),
+         path .. " requests a dynamic loader; it is not static")
+  assert(not (dynamic.out or ""):find("NEEDED"),
+         path .. " has NEEDED entries; it is not static")
+end
+
+local function check_binaries(root)
+  local found = oslo.run{ "find", root, "-type", "f", "-name", "*_test", capture = true }
+  local checked = 0
+  for path in (found.out or ""):gmatch("[^\n]+") do
+    assert_static(path)
+    checked = checked + 1
+  end
+  assert(checked > 0, "no binary was produced, so nothing was checked")
+  print(oslo.ui.style("✓ static", { fg = "green" }) ..
+        ("  %d binary(s), nothing to install on the target machine"):format(checked))
+end
+
+local TOOLCHAIN_PARAMS = {
+  { "--toolchain", desc = "clang or gcc; " .. DEFAULT_TOOLCHAIN .. " by default" },
+  { "--dynamic", desc = "link against the host libc instead, for a faster inner loop" },
+}
+
 ---------------------------------------------------------------------------- cmake
 
+-- CMake is the build system; these recipes only drive it. Standard, warnings, targets and tests
+-- live in CMakeLists.txt.
 local BUILD_DIR = os.getenv("BUILD_DIR") or "build"
-local STATIC_DIR = BUILD_DIR .. "-static"
 
 make.recipe{
   name = "config",
-  desc = "configure the build tree: --toolchain clang | gcc",
-  params = { { "--toolchain", desc = "clang or gcc; clang by default" } },
+  desc = "configure the build tree: musl and static unless --dynamic",
+  params = TOOLCHAIN_PARAMS,
   run = function(a)
-    local argv = { "-S", ".", "-B", BUILD_DIR, "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON" }
-    local chain = a.toolchain or TOOLCHAIN or "clang"
-    if chain == "clang" then
-      argv[#argv + 1] = "-DCMAKE_C_COMPILER=clang"
-      argv[#argv + 1] = "-DCMAKE_CXX_COMPILER=clang++"
-    elseif chain == "gcc" then
-      argv[#argv + 1] = "-DCMAKE_C_COMPILER=gcc"
-      argv[#argv + 1] = "-DCMAKE_CXX_COMPILER=g++"
+    local cc, cxx, static = toolchain(a)
+    local argv = { "-S", ".", "-B", BUILD_DIR,
+                   "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON",
+                   "-DCMAKE_C_COMPILER=" .. cc,
+                   "-DCMAKE_CXX_COMPILER=" .. cxx }
+    if static then
+      argv[#argv + 1] = "-DCMAKE_BUILD_TYPE=Release"
+      argv[#argv + 1] = "-DCMAKE_EXE_LINKER_FLAGS=-static"
     end
     -- Ninja when it is here, so an incremental build is not a full one.
     if oslo.run{ "sh", "-c", "command -v ninja", capture = true }.ok then
@@ -102,12 +173,21 @@ make.recipe{
   end,
 }
 
-local function configured()
+local function configured(a)
   if not oslo.fs.stat(BUILD_DIR) then make.run("config") end
 end
 
-make.recipe{ name = "build", desc = "the library",
-             run = function() configured(); sh.cmake("--build", BUILD_DIR, "--parallel") end }
+make.recipe{
+  name = "build",
+  desc = "the library and its tests, static against musl",
+  params = TOOLCHAIN_PARAMS,
+  run = function(a)
+    configured(a)
+    sh.cmake("--build", BUILD_DIR, "--parallel")
+    local _, _, static = toolchain(a)
+    if static then check_binaries(BUILD_DIR) end
+  end,
+}
 make.alias("b", "build")
 
 make.recipe{
@@ -125,54 +205,7 @@ make.recipe{ name = "install", desc = "install into $PREFIX", deps = { "build" }
              run = function() sh.cmake("--install", BUILD_DIR, "--prefix", PREFIX) end }
 
 make.recipe{ name = "clean", desc = "remove the build tree",
-             run = function() sh.rm("-rf", BUILD_DIR, STATIC_DIR) end }
-
--------------------------------------------------------------------- static musl
-
--- What ships. A binary linked against the host libc stops working the moment it is copied to a
--- machine with a different one, so the release build targets musl and links statically.
---
--- The toolchain comes from the flake as a path (MUSL_CC), not from $PATH: musl headers on the
--- default search path make an ordinary build compile against musl and link against glibc, which
--- succeeds silently and crashes at startup.
---
--- gcc rather than clang here, and only here: musl-clang has no C++ standard library, so a clang
--- musl build works for C and falls over on the first #include <string>. `make config` still
--- defaults to clang, which is what the dev loop uses.
-local function musl_cc()
-  local root = os.getenv("MUSL_CC") or ""
-  assert(root ~= "", "the static build needs MUSL_CC from the dev shell: nix develop")
-  return root
-end
-
--- Asked of the ELF, not assumed. "static" quietly coming out dynamic is only ever noticed by
--- whoever the binary fails for. `ldd` is not enough: it prints "statically linked" for a binary
--- that still carries an INTERP and will not start.
-local function assert_static(path)
-  local segments = oslo.run{ "readelf", "-l", path, capture = true }
-  local dynamic = oslo.run{ "readelf", "-d", path, capture = true }
-  assert(segments.ok, path .. " was not produced, or readelf could not read it")
-  assert(not (segments.out or ""):find("program interpreter"),
-         path .. " requests a dynamic loader; it is not static")
-  assert(not (dynamic.out or ""):find("NEEDED"),
-         path .. " has NEEDED entries; it is not static")
-  print(oslo.ui.style("✓ static", { fg = "green" }) .. "  " .. path)
-end
-
-make.recipe{
-  name = "static",
-  desc = "a static musl build of everything, for shipping",
-  run = function()
-    local cc = musl_cc()
-    sh.cmake("-S", ".", "-B", STATIC_DIR,
-             "-DCMAKE_BUILD_TYPE=Release",
-             "-DCMAKE_C_COMPILER=" .. cc .. "/bin/gcc",
-             "-DCMAKE_CXX_COMPILER=" .. cc .. "/bin/g++",
-             "-DCMAKE_EXE_LINKER_FLAGS=-static")
-    sh.cmake("--build", STATIC_DIR, "--parallel")
-    for _, path in ipairs(oslo.fs.glob(STATIC_DIR .. "/*_test")) do assert_static(path) end
-  end,
-}
+             run = function() sh.rm("-rf", BUILD_DIR) end }
 
 make.recipe{ name = "compile", desc = "clean, then build", deps = { "clean", "build" } }
 make.alias("c", "compile")
