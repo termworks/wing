@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Configuration - wing</title>
+        <title>Templates as plugins - wing</title>
 
 
         <!-- Custom HTML head -->
@@ -152,125 +152,106 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="configuration"><a class="header" href="#configuration">Configuration</a></h1>
-<p>wing embeds a Lua 5.4 interpreter and reads two kinds of Lua: a <code>template.lua</code> beside each
-template, and one <code>init.lua</code> of your own.</p>
-<p>Both are lists of statements. You assign settings, you register behaviour by calling, and the file
-returns nothing — wing reads the tables back once every chunk has run.</p>
-<h2 id="where-the-files-are"><a class="header" href="#where-the-files-are">Where the files are</a></h2>
-<div class="table-wrapper"><table><thead><tr><th>path</th><th>what it is</th></tr></thead><tbody>
-<tr><td><code>&lt;templates&gt;/&lt;name&gt;/template.lua</code></td><td>a template describing itself</td></tr>
-<tr><td><code>$XDG_CONFIG_HOME/wing/templates/</code></td><td>your own template tree</td></tr>
-<tr><td><code>$XDG_CONFIG_HOME/wing/init.lua</code></td><td>your config: settings, overrides, placeholders, hooks</td></tr>
+                        <h1 id="templates-as-plugins"><a class="header" href="#templates-as-plugins">Templates as plugins</a></h1>
+<p>A template is a directory you can install from somewhere else, and it can carry logic of its own.
+It is still called a template, and the bundled ones still ship — what changed is that a template is
+no longer only a pile of files.</p>
+<pre><code class="language-sh">wing template install ~/src/my-template
+wing template install github:someone/repo@v1.2.0
+wing template installed
+wing template allow my-template
+wing template uninstall my-template
+</code></pre>
+<h2 id="what-a-template-is"><a class="header" href="#what-a-template-is">What a template is</a></h2>
+<pre><code class="language-text">my-template/
+  template.lua    what it declares — read before you decide to trust it
+  init.lua        optional: what it does — loaded only when the template is used
+  …the files
+</code></pre>
+<p><code>template.lua</code> is the manifest and it is inert by design: it is read with the ordinary <code>wing</code>
+prelude and nothing that reaches the machine, so <code>install</code> can show you what a template <em>claims</em>
+without running it. <code>init.lua</code> is where behaviour lives, and it is not read at install time at all.</p>
+<p>Neither file is copied into the projects a template generates.</p>
+<h2 id="installing"><a class="header" href="#installing">Installing</a></h2>
+<p>A source is a directory on this machine, or a git repository <strong>at a revision</strong>:</p>
+<pre><code class="language-sh">wing template install ./my-template
+wing template install github:user/repo@v1.0.0
+wing template install https://example.com/t.git@a1b2c3d
+wing template install file:///srv/mirror/t.git@v2      # a local mirror
+</code></pre>
+<p>The revision is not optional for a git source. Without one, <code>install</code> takes whatever the branch
+says today and something else tomorrow — and the trust check below would then refuse to load it the
+morning after every upstream commit, which teaches people to run <code>allow</code> without reading. That is
+worse than having no gate.</p>
+<p>Installing prints what the template declares, then keeps it under
+<code>$XDG_DATA_HOME/wing/templates/&lt;name&gt;</code> and registers it, so <code>wing template apply</code> works straight
+away.</p>
+<h2 id="trust"><a class="header" href="#trust">Trust</a></h2>
+<p><code>install</code> records what the template's <code>.lua</code> files hashed to. <code>wing template installed</code> recomputes
+and compares:</p>
+<pre><code>  my-template   github:user/repo@v1.0.0   CHANGED — run `wing template allow my-template`
+</code></pre>
+<p>So editing an installed template, or pulling a new revision over it, is visible rather than picked
+up silently. <code>wing template allow &lt;name&gt;</code> agrees to what is there now.</p>
+<p>Only <code>.lua</code> is hashed. Editing a README is not a change to what a template will do, and hashing it
+would make every documentation edit a refusal.</p>
+<p>A template wing did not install — the bundled tree, or something you wrote by hand in your config
+directory — is <em>unmanaged</em>, not untrusted. Gating those would be a refusal with no remedy.</p>
+<h2 id="logic"><a class="header" href="#logic">Logic</a></h2>
+<p><code>init.lua</code> runs when the template is used. Its hooks are scoped to the template it belongs to.</p>
+<h3 id="deciding-whether-to-apply-at-all"><a class="header" href="#deciding-whether-to-apply-at-all">Deciding whether to apply at all</a></h3>
+<pre><code class="language-lua">local wing = require("wing")
+
+wing.on.check(function(ctx)
+  if not wing.sys.has("nix") then
+    wing.warn("nix is not installed — the flake will be written but you cannot enter the shell")
+  end
+end)
+</code></pre>
+<p>Return <code>{ refuse = "why" }</code> to stop the apply. Returning nothing carries on, which is the common
+case: warning is usually the right answer, and it is what happens by default.</p>
+<h3 id="deciding-file-by-file"><a class="header" href="#deciding-file-by-file">Deciding file by file</a></h3>
+<pre><code class="language-lua">wing.on.file(function(file)
+  if file.rel == "flake.nix" and not wing.sys.has("nix") then
+    return { skip = true }
+  end
+end)
+</code></pre>
+<p>A skipped file is left out of the plan as well, so <code>--dry-run</code> shows what would really be written.</p>
+<h3 id="what-a-template-can-ask"><a class="header" href="#what-a-template-can-ask">What a template can ask</a></h3>
+<div class="table-wrapper"><table><thead><tr><th></th><th></th></tr></thead><tbody>
+<tr><td><code>wing.sys.has(cmd)</code></td><td>is this command on <code>$PATH</code></td></tr>
+<tr><td><code>wing.sys.exists(path)</code></td><td>a file or a directory, either counts</td></tr>
+<tr><td><code>wing.sys.env(name)</code></td><td>the variable, or <code>nil</code> when unset</td></tr>
+<tr><td><code>wing.warn(msg)</code></td><td>to stderr</td></tr>
+<tr><td><code>wing.info(msg)</code></td><td>to stdout</td></tr>
 </tbody></table>
 </div>
-<p>Templates are <strong>not</strong> carried inside the binary — a fresh install has none until a tree is
-reachable. From a wing checkout, <code>make templates</code> puts them where wing will find them:</p>
-<pre><code class="language-sh">make templates                 # -&gt; $XDG_CONFIG_HOME/wing/templates
-make templates --dest=/opt/wing/templates
-</code></pre>
-<p>It mirrors each bundled template individually, so a template of your own sitting in that directory
-is left alone rather than deleted.</p>
-<h2 id="template-roots"><a class="header" href="#template-roots">Template roots</a></h2>
-<p>Every one of these is searched, <strong>least specific first</strong>, and a later root overrides an earlier one
-by name:</p>
-<pre><code>&lt;binary&gt;/../share/wing/templates
-&lt;binary&gt;/templates
-./templates
-&lt;data dir&gt;/templates
-$XDG_CONFIG_HOME/wing/templates      ← yours, wins
-</code></pre>
-<p><code>$WING_TEMPLATE_DIR</code> is the exception: set it and <em>only</em> that tree is used, which is what a
-reproducible build and a test both want.</p>
-<p>So your own tree looks like the bundled one:</p>
-<pre><code>~/.config/wing/templates/
-  common/flake.nix       layered over the bundled common/
-  go/template.lua        replaces the bundled "go" outright
-  mine/
-    template.lua
-    base/  flavours/uv/  flavours work here too
-</code></pre>
-<h3 id="common-layers"><a class="header" href="#common-layers">common/ layers</a></h3>
-<p>A template is assembled by stacking <code>common/</code> → the template's own files → its flavour, each layer
-overwriting the last. Roots add one more dimension to that same stack: <strong>every</strong> root's <code>common/</code>
-applies, in search order.</p>
-<p>That means overriding one shared file is dropping one file. Put a <code>flake.nix</code> in
-<code>~/.config/wing/templates/common/</code> and it beats the bundled one, while <code>.gitignore</code>, <code>PROJECT</code> and
-<code>README.md</code> still come from the bundled tree.</p>
-<p>A <code>common/</code> is shared extras, not a requirement — a template that only has its own files works.</p>
-<h2 id="declaring-a-template"><a class="header" href="#declaring-a-template">Declaring a template</a></h2>
-<pre><code class="language-lua">local wing = require("wing")
-
-wing.template("go", {
-  description = "Go CLI app with .make.lua, flake.nix, tests, and release hooks",
-  language = "go",
-  framework = "cli",
-  tags = { "builtin", "go", "cli" },
-  nix_packages = [[
-            pkgs.go
-            pkgs.gopls]],
-})
-</code></pre>
-<p>Adding a template is dropping a directory in. Nothing is recompiled.</p>
-<h3 id="flavours"><a class="header" href="#flavours">Flavours</a></h3>
-<p>A flavour is a named variant: its own packages, and its own note about the environment it sets up.</p>
-<pre><code class="language-lua">wing.template("python", {
-  default_flavour = "nix",
-  flavours = {
-    { name = "nix", nix_packages = [[…]], environment = "…from Nix directly." },
-    { name = "uv",  nix_packages = [[…]], environment = "…run `make setup`." },
-  },
-})
-</code></pre>
-<p>An array rather than a map, because the order is the order a listing shows and a manifest puts its
-default first.</p>
-<h2 id="your-own-config"><a class="header" href="#your-own-config">Your own config</a></h2>
-<p><code>init.lua</code> is loaded <strong>after</strong> every manifest, which is what makes overriding work: registering a
-name that already exists replaces it rather than adding a second.</p>
-<pre><code class="language-lua">local wing = require("wing")
-
--- replace a bundled template outright
-wing.template("go", { description = "my go template", language = "go" })
-
--- add one whose files live outside every root: an absolute dir is taken as written
-wing.template("paper", { description = "a LaTeX paper", dir = "/home/me/templates/paper" })
-</code></pre>
-<p>Overriding a name from <code>init.lua</code> without naming a <code>dir</code> keeps the files it did not mention: the
-directory is looked up across the roots, most specific first. So this replaces the description and
-still builds the bundled go template:</p>
-<pre><code class="language-lua">wing.template("go", { description = "my wording", language = "go" })
-</code></pre>
-<h3 id="placeholders"><a class="header" href="#placeholders">Placeholders</a></h3>
-<p>Keyed by the token they replace. A value is a string, or a function of the apply context.</p>
-<pre><code class="language-lua">wing.placeholders["{{author}}"] = "bresilla"
-wing.placeholders["{{year}}"]   = function(ctx) return os.date("%Y") end
-</code></pre>
-<p>Your tokens are applied before the built-in ones, so <code>{{name}}</code> can be redefined.</p>
-<p>The context carries <code>template</code>, <code>flavour</code>, <code>name</code> and <code>path</code>.</p>
-<h3 id="apply-handlers"><a class="header" href="#apply-handlers">Apply handlers</a></h3>
-<p>Registered rather than assigned into one hook field, so a config is as many small named functions
-as it wants.</p>
-<pre><code class="language-lua">wing.on.apply(function(ctx) print("made " .. ctx.name) end)
-wing.on.apply(function(ctx) os.execute("git -C " .. ctx.path .. " init -q") end)
-</code></pre>
-<p>They run in registration order. <strong>One that raises is reported and the rest still run</strong> — a mistake
-in the third handler is not a reason to skip the fourth, which has nothing to do with it.</p>
-<h2 id="when-something-is-wrong"><a class="header" href="#when-something-is-wrong">When something is wrong</a></h2>
-<p>A config that cannot be read is fatal, and reported the way Lua wrote it:</p>
-<pre><code>wing config: /home/me/.config/wing/init.lua:6: syntax error near 'is'
-</code></pre>
-<p>A template silently missing from the listing would read as "wing lost my template" rather than
-"line 6 has a typo", so wing stops instead.</p>
+<p>All reads and messages. Nothing here runs a command on the template's behalf.</p>
+<p>The context every hook receives carries <code>template</code>, <code>flavour</code>, <code>name</code> and <code>path</code>; <code>on.file</code> adds
+<code>rel</code>.</p>
+<h3 id="registered-from-a-user-config-instead"><a class="header" href="#registered-from-a-user-config-instead">Registered from a user config instead</a></h3>
+<p>The same hooks work in <code>~/.config/wing/init.lua</code>. Registered there they have no owning template, so
+they apply to <strong>every</strong> template — one rule, and it reads the same in both places.</p>
+<h2 id="what-it-cannot-do"><a class="header" href="#what-it-cannot-do">What it cannot do</a></h2>
+<ul>
+<li><strong>Sandbox anything.</strong> A template's <code>init.lua</code> is Lua with the <code>wing</code> API. The hash gate decides
+whether you trust it, not what it may do once you have.</li>
+<li><strong>Resolve dependencies, or find templates by name.</strong> There is no registry. A template that needs
+another says so in prose.</li>
+<li><strong>Survive its own bugs silently.</strong> A hook that raises is reported, naming the template, and the
+remaining hooks still run.</li>
+</ul>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="templates.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="config.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="plugins.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="env.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -280,11 +261,11 @@ in the third handler is not a reason to skip the fourth, which has nothing to do
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="templates.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="config.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="plugins.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="env.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>

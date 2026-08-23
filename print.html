@@ -432,6 +432,96 @@ in the third handler is not a reason to skip the fourth, which has nothing to do
 </code></pre>
 <p>A template silently missing from the listing would read as "wing lost my template" rather than
 "line 6 has a typo", so wing stops instead.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="templates-as-plugins"><a class="header" href="#templates-as-plugins">Templates as plugins</a></h1>
+<p>A template is a directory you can install from somewhere else, and it can carry logic of its own.
+It is still called a template, and the bundled ones still ship — what changed is that a template is
+no longer only a pile of files.</p>
+<pre><code class="language-sh">wing template install ~/src/my-template
+wing template install github:someone/repo@v1.2.0
+wing template installed
+wing template allow my-template
+wing template uninstall my-template
+</code></pre>
+<h2 id="what-a-template-is"><a class="header" href="#what-a-template-is">What a template is</a></h2>
+<pre><code class="language-text">my-template/
+  template.lua    what it declares — read before you decide to trust it
+  init.lua        optional: what it does — loaded only when the template is used
+  …the files
+</code></pre>
+<p><code>template.lua</code> is the manifest and it is inert by design: it is read with the ordinary <code>wing</code>
+prelude and nothing that reaches the machine, so <code>install</code> can show you what a template <em>claims</em>
+without running it. <code>init.lua</code> is where behaviour lives, and it is not read at install time at all.</p>
+<p>Neither file is copied into the projects a template generates.</p>
+<h2 id="installing"><a class="header" href="#installing">Installing</a></h2>
+<p>A source is a directory on this machine, or a git repository <strong>at a revision</strong>:</p>
+<pre><code class="language-sh">wing template install ./my-template
+wing template install github:user/repo@v1.0.0
+wing template install https://example.com/t.git@a1b2c3d
+wing template install file:///srv/mirror/t.git@v2      # a local mirror
+</code></pre>
+<p>The revision is not optional for a git source. Without one, <code>install</code> takes whatever the branch
+says today and something else tomorrow — and the trust check below would then refuse to load it the
+morning after every upstream commit, which teaches people to run <code>allow</code> without reading. That is
+worse than having no gate.</p>
+<p>Installing prints what the template declares, then keeps it under
+<code>$XDG_DATA_HOME/wing/templates/&lt;name&gt;</code> and registers it, so <code>wing template apply</code> works straight
+away.</p>
+<h2 id="trust"><a class="header" href="#trust">Trust</a></h2>
+<p><code>install</code> records what the template's <code>.lua</code> files hashed to. <code>wing template installed</code> recomputes
+and compares:</p>
+<pre><code>  my-template   github:user/repo@v1.0.0   CHANGED — run `wing template allow my-template`
+</code></pre>
+<p>So editing an installed template, or pulling a new revision over it, is visible rather than picked
+up silently. <code>wing template allow &lt;name&gt;</code> agrees to what is there now.</p>
+<p>Only <code>.lua</code> is hashed. Editing a README is not a change to what a template will do, and hashing it
+would make every documentation edit a refusal.</p>
+<p>A template wing did not install — the bundled tree, or something you wrote by hand in your config
+directory — is <em>unmanaged</em>, not untrusted. Gating those would be a refusal with no remedy.</p>
+<h2 id="logic"><a class="header" href="#logic">Logic</a></h2>
+<p><code>init.lua</code> runs when the template is used. Its hooks are scoped to the template it belongs to.</p>
+<h3 id="deciding-whether-to-apply-at-all"><a class="header" href="#deciding-whether-to-apply-at-all">Deciding whether to apply at all</a></h3>
+<pre><code class="language-lua">local wing = require("wing")
+
+wing.on.check(function(ctx)
+  if not wing.sys.has("nix") then
+    wing.warn("nix is not installed — the flake will be written but you cannot enter the shell")
+  end
+end)
+</code></pre>
+<p>Return <code>{ refuse = "why" }</code> to stop the apply. Returning nothing carries on, which is the common
+case: warning is usually the right answer, and it is what happens by default.</p>
+<h3 id="deciding-file-by-file"><a class="header" href="#deciding-file-by-file">Deciding file by file</a></h3>
+<pre><code class="language-lua">wing.on.file(function(file)
+  if file.rel == "flake.nix" and not wing.sys.has("nix") then
+    return { skip = true }
+  end
+end)
+</code></pre>
+<p>A skipped file is left out of the plan as well, so <code>--dry-run</code> shows what would really be written.</p>
+<h3 id="what-a-template-can-ask"><a class="header" href="#what-a-template-can-ask">What a template can ask</a></h3>
+<div class="table-wrapper"><table><thead><tr><th></th><th></th></tr></thead><tbody>
+<tr><td><code>wing.sys.has(cmd)</code></td><td>is this command on <code>$PATH</code></td></tr>
+<tr><td><code>wing.sys.exists(path)</code></td><td>a file or a directory, either counts</td></tr>
+<tr><td><code>wing.sys.env(name)</code></td><td>the variable, or <code>nil</code> when unset</td></tr>
+<tr><td><code>wing.warn(msg)</code></td><td>to stderr</td></tr>
+<tr><td><code>wing.info(msg)</code></td><td>to stdout</td></tr>
+</tbody></table>
+</div>
+<p>All reads and messages. Nothing here runs a command on the template's behalf.</p>
+<p>The context every hook receives carries <code>template</code>, <code>flavour</code>, <code>name</code> and <code>path</code>; <code>on.file</code> adds
+<code>rel</code>.</p>
+<h3 id="registered-from-a-user-config-instead"><a class="header" href="#registered-from-a-user-config-instead">Registered from a user config instead</a></h3>
+<p>The same hooks work in <code>~/.config/wing/init.lua</code>. Registered there they have no owning template, so
+they apply to <strong>every</strong> template — one rule, and it reads the same in both places.</p>
+<h2 id="what-it-cannot-do"><a class="header" href="#what-it-cannot-do">What it cannot do</a></h2>
+<ul>
+<li><strong>Sandbox anything.</strong> A template's <code>init.lua</code> is Lua with the <code>wing</code> API. The hash gate decides
+whether you trust it, not what it may do once you have.</li>
+<li><strong>Resolve dependencies, or find templates by name.</strong> There is no registry. A template that needs
+another says so in prose.</li>
+<li><strong>Survive its own bugs silently.</strong> A hook that raises is reported, naming the template, and the
+remaining hooks still run.</li>
+</ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="environment-wing-env"><a class="header" href="#environment-wing-env">Environment (<code>wing env</code>)</a></h1>
 <p><code>wing env</code> is a direnv-compatible environment loader. The <code>.envrc</code> file is
 executable bash and the source of truth. wing watches the current directory
