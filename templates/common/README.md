@@ -21,6 +21,9 @@ make release --type patch
 The directory environment is `.env.lua`, loaded when you `cd` here and unloaded when you leave. It
 brings up the flake's dev shell and defines `_b`, `_r`, `_t`, `_v` and `_i` for the commands above.
 
+wing generated this as a git repository with git-flow already initialized, so it starts on
+`develop` with `main` beside it, and `make release` works without any further setup.
+
 ## Requirements
 
 `.make.lua` and `.env.lua` are read by [oslo](https://github.com/termworks/oslo), which provides

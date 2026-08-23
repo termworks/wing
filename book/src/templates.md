@@ -79,6 +79,21 @@ recipes.
 | go, nim, rust | the language's own tool | — |
 | python | pyproject | `nix` (default), `uv`, `pixi`, `micromamba` |
 
+### A generated project is a repository
+
+`wing template apply` finishes by running `git init` and `git flow init -d --preset=classic`, so a
+new project starts on `develop` with `main` beside it and the `feature/`, `release/` and `hotfix/`
+prefixes configured. The recipes assume this: `make release` runs `git-rel`, which refuses to run
+anywhere but `develop`.
+
+Three cases leave it alone, each saying so on the last line of the apply:
+
+- `--no-git`, for generating something that is not a project of its own
+- the target is already inside a checkout — a nested repository the outer one cannot see into is
+  never what was wanted
+- `git-flow` is not installed, or git has no author identity to commit with; the repository is
+  still created, and the line names which of the two it was
+
 ### Where the version lives
 
 There is no version file of wing's own. Each generated project keeps its version where its own

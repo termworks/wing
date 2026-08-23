@@ -1,4 +1,4 @@
-import std/[os, strutils]
+import std/[os, osproc, strutils]
 
 import test_support
 
@@ -521,3 +521,37 @@ discard checked(wing & "template apply rust " & quoteShell(verTarget) & " --name
 doAssert readFile(verTarget / "Cargo.toml").contains("version = \"0.1.0\"")
 doAssert not fileExists(verTarget / "PROJECT"),
     "a generated project should have no PROJECT file"
+
+# --- a generated project arrives under version control ------------------------
+# The recipes assume it: `make release` runs git-rel, which works on `develop` and nowhere else, so
+# a project that is only loose files is one `git flow init` short of its own release recipe.
+let repoTarget = "/tmp/wing-templates-repo"
+removeDir(repoTarget)
+let repoOut = checked(wing & "template apply rust " & quoteShell(repoTarget) &
+    " --name sample_app")
+doAssert dirExists(repoTarget / ".git"), repoOut
+if repoOut.contains("were not created"):
+  # No git-flow, or no author identity to commit with: the repository is still created, and the
+  # line says which of the two it was rather than leaving a half-made project unexplained.
+  doAssert repoOut.contains("Initialized a git repository"), repoOut
+else:
+  doAssert repoOut.contains("git-flow (main, develop)"), repoOut
+  let branch = execCmdEx("git -C " & quoteShell(repoTarget) &
+      " rev-parse --abbrev-ref HEAD").output.strip()
+  doAssert branch == "develop", "a new project should start on develop, not " & branch
+
+# --no-git leaves it alone, for generating into something that is not a project of its own.
+let bareTarget = "/tmp/wing-templates-repo-none"
+removeDir(bareTarget)
+discard checked(wing & "template apply rust " & quoteShell(bareTarget) &
+    " --name sample_app --no-git")
+doAssert not dirExists(bareTarget / ".git"), "--no-git should not create a repository"
+
+# Generating inside a checkout does not nest a second repository in it.
+let outerRepo = "/tmp/wing-templates-repo-outer"
+resetDir(outerRepo)
+doAssert execCmdEx("git init -q " & quoteShell(outerRepo)).exitCode == 0
+let innerOut = checked(wing & "template apply rust " & quoteShell(outerRepo /
+    "pkg") & " --name sample_app")
+doAssert not dirExists(outerRepo / "pkg" / ".git"), innerOut
+doAssert innerOut.contains("already under version control"), innerOut
