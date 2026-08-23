@@ -493,3 +493,31 @@ doAssert mojoFlake.contains("conda.modular.com"), mojoFlake
 doAssert mojoFlake.contains("mblack"), mojoFlake
 doAssert mojoFlake.contains("MODULAR_HOME"),
     "the compiler needs a writable MODULAR_HOME, which the store path is not"
+
+# --- a generated project keeps its version where its language already keeps it ---
+# There is no version file of wing's own: `veri`, the bumper behind `make release`, reads each
+# language's own manifest, and a file invented here would be one more copy for nothing to update.
+for name in ["c", "c3", "carbon", "cpp", "crystal", "d", "go", "haskell", "mojo",
+             "nim", "ocaml", "odin", "python", "rust", "v", "vala", "zig"]:
+  doAssert not fileExists("templates" / name / "PROJECT"),
+      name & " should not carry a PROJECT file"
+doAssert not fileExists("templates" / "common" / "PROJECT"),
+    "the shared base should not carry a PROJECT file either"
+
+for recipes in walkDirRec("templates"):
+  if recipes.extractFilename != ".make.lua":
+    continue
+  let text = readFile(recipes)
+  doAssert not text.contains("oslo.fs.read(\"PROJECT\")"),
+      recipes & " still reads a PROJECT file"
+  # Either a manifest is read, or the version comes from the tag `make release` creates.
+  doAssert text.contains("oslo.fs.read(") or text.contains(
+      "git\", \"describe\""), recipes & " should read a version from somewhere"
+
+# The version each template reports is the one its own manifest carries.
+let verTarget = "/tmp/wing-templates-version"
+removeDir(verTarget)
+discard checked(wing & "template apply rust " & quoteShell(verTarget) & " --name sample_app")
+doAssert readFile(verTarget / "Cargo.toml").contains("version = \"0.1.0\"")
+doAssert not fileExists(verTarget / "PROJECT"),
+    "a generated project should have no PROJECT file"

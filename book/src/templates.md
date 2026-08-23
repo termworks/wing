@@ -79,6 +79,35 @@ recipes.
 | go, nim, rust | the language's own tool | — |
 | python | pyproject | `nix` (default), `uv`, `pixi`, `micromamba` |
 
+### Where the version lives
+
+There is no version file of wing's own. Each generated project keeps its version where its own
+language already keeps it, which is also where [`veri`](https://github.com/bresilla) — the bumper
+behind `make release` — looks for it:
+
+| template | version read from |
+|---|---|
+| rust | `Cargo.toml` |
+| nim | `*.nimble` |
+| v | `v.mod` |
+| go | the `version` literal in `src/main.go` (go.mod has no version field) |
+| d | `dub.json` |
+| python | `pyproject.toml` |
+| c, cpp (xmake) | `set_version` in `xmake.lua` |
+| c, cpp (cmake) | `project(... VERSION ...)` in `CMakeLists.txt` |
+| crystal | `shard.yml` |
+| haskell | the `*.cabal` file |
+| ocaml | `dune-project` |
+| vala | `meson.build` |
+| c3 | `project.json` |
+| carbon, mojo, odin, zig | the latest git tag |
+
+The last row is for languages with no manifest to keep a version in. Zig is in it on purpose: a
+`build.zig.zon` also needs a `fingerprint` unique to each project, which zig generates and a
+template cannot ship — and an application does not need the manifest at all.
+
+`make version` prints what the recipes read, and `make build` reports it beside the binary.
+
 ### Carbon and Mojo bring their own compiler
 
 Neither is in nixpkgs, and neither can be installed from a distribution's package manager: Carbon
@@ -141,7 +170,7 @@ Templates live on disk, not inside the binary — see [Configuration](./config.m
 for the roots that are searched and how to add your own.
 
 Every template shares one common base for files like `.env.lua`, `flake.nix`,
-`README.md`, `.gitignore`, and `PROJECT`; each language directory overlays its
+`README.md`, and `.gitignore`; each language directory overlays its
 own source, build, test, and workflow files. Python adds a shared Python base
 plus one selected environment flavour overlay.
 

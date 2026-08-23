@@ -7,11 +7,10 @@ import (
 	"github.com/bresilla/{{kebab_name}}/src/cmd"
 )
 
-// Filled in at link time from PROJECT: `make build` passes -X main.version. A literal here would
-// be a second place to change, and the one nothing reads -- the binary is built with the flag, so
-// the literal only shows up in a `go build` run by hand.
+// go.mod carries no version, so this literal is where the project's version lives -- it is the
+// file `veri` rewrites on release. commit, date and builtBy are for a release pipeline to stamp in.
 var (
-	version = "dev"
+	version = "0.1.0"
 	commit  = ""
 	date    = ""
 	builtBy = ""

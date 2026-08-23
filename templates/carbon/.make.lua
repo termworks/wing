@@ -10,17 +10,15 @@
 
 local make = oslo.make
 
--- Name and version live in PROJECT, one per line, so every tool reads them from one place.
-local function project()
-  local found = {}
-  for line in (oslo.fs.read("PROJECT") or ""):gmatch("[^\n]+") do
-    local value = line:match("^%s*([^#%[%s]%S*)%s*$")
-    if value then found[#found + 1] = value end
-  end
-  return found[1] or "{{kebab_name}}", found[2] or "0.1.0"
-end
-
-local NAME, VERSION = project()
+-- Carbon has no manifest file to keep a version in, so the version is the latest git tag --
+-- which is exactly what `make release` creates. Before the first release there is nothing to
+-- report, and "0.0.0" says so rather than inventing a number.
+local NAME = "{{kebab_name}}"
+local VERSION = (function()
+  local tag = oslo.run{ "git", "describe", "--tags", "--abbrev=0", capture = true }
+  if not tag.ok then return "0.0.0" end
+  return (tag.out or ""):match("^%s*v?([^%s]+)") or "0.0.0"
+end)()
 local PREFIX = os.getenv("PREFIX") or (os.getenv("HOME") .. "/.local")
 
 ------------------------------------------------------------------ what was built

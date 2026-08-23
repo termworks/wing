@@ -2,25 +2,22 @@ import std.stdio;
 
 import {{snake_name}}.core;
 
-/// The version is read from PROJECT at compile time rather than repeated here. dub.json carries no
-/// version of its own, so a literal in D source is a copy nothing keeps in step: it would still say
-/// 0.1.0 long after the project had moved on.
-enum versionString = readProjectVersion();
+/// The version is read from dub.json at compile time rather than repeated here. dub.json is where
+/// dub and `veri` both keep it, so a literal in D source would be a second copy that nothing bumps:
+/// it would still say 0.1.0 long after the project had moved on.
+enum versionString = readDubVersion();
 
-private string readProjectVersion()
+private string readDubVersion()
 {
-    import std.string : splitLines, startsWith, strip;
+    import std.algorithm : findSplitAfter;
+    import std.string : indexOf, strip;
 
-    string[] fields;
-    foreach (line; import("PROJECT").splitLines())
-    {
-        const trimmed = line.strip();
-        if (trimmed.length == 0 || trimmed.startsWith("#"))
-            continue;
-        fields ~= trimmed;
-    }
-    assert(fields.length >= 2, "PROJECT is missing its version line");
-    return fields[1];
+    auto rest = import("dub.json").findSplitAfter("\"version\"");
+    assert(rest, "dub.json is missing its version field");
+    auto opening = rest[1].indexOf('"');
+    assert(opening >= 0, "dub.json's version field is malformed");
+    auto value = rest[1][opening + 1 .. $];
+    return value[0 .. value.indexOf('"')];
 }
 
 void main(string[] args)

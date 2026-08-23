@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "{{kebab_name}}"
-dynamic = ["version"]
+version = "0.1.0"
 description = "{{PROJECT_NAME}}"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -18,13 +18,6 @@ dev = [
   "pytest",
   "ruff",
 ]
-
-# The version comes from PROJECT, the one file .make.lua reads, so what pip installs and what
-# `make version` prints cannot drift apart. PROJECT is name on the first line, version on the
-# second.
-[tool.hatch.version]
-path = "PROJECT"
-pattern = "(?m)^(?P<version>[0-9]+\\.[0-9]+\\.[0-9]+)$"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/{{snake_name}}"]

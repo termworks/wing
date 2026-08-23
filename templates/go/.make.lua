@@ -10,17 +10,10 @@
 
 local make = oslo.make
 
--- Name and version live in PROJECT, one per line, so every tool reads them from one place.
-local function project()
-  local found = {}
-  for line in (oslo.fs.read("PROJECT") or ""):gmatch("[^\n]+") do
-    local value = line:match("^%s*([^#%[%s]%S*)%s*$")
-    if value then found[#found + 1] = value end
-  end
-  return found[1] or "{{kebab_name}}", found[2] or "0.1.0"
-end
-
-local NAME, VERSION = project()
+-- The name is fixed at generation time; the version comes from src/main.go, the language's own
+-- manifest and the file `veri` rewrites when `make release` cuts a version. Go has no version field in go.mod, so the literal in main.go is where veri keeps it.
+local NAME = "{{kebab_name}}"
+local VERSION = ((oslo.fs.read("src/main.go") or ""):match('version%s*=%s*"([^"]+)"')) or "0.0.0"
 local PREFIX = os.getenv("PREFIX") or (os.getenv("HOME") .. "/.local")
 
 ------------------------------------------------------------------ what was built
@@ -122,10 +115,10 @@ make.recipe{
 
 ---------------------------------------------------------------------------- go
 
--- `go build` is the build system; these recipes only drive it. The version is passed through from
--- PROJECT because Go has nowhere else to read it from -- everything else about how this compiles
+-- `go build` is the build system; these recipes only drive it. The version is not passed in: it is
+-- already in main.go, which is where Go projects keep it. Everything else about how this compiles
 -- is go's own business, and belongs in go.mod and the source, not here.
-local LDFLAGS = "-s -w -X main.version=" .. VERSION
+local LDFLAGS = "-s -w"
 
 make.recipe{ name = "build", desc = "the binary",
              run = function()

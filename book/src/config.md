@@ -59,7 +59,7 @@ overwriting the last. Roots add one more dimension to that same stack: **every**
 applies, in search order.
 
 That means overriding one shared file is dropping one file. Put a `flake.nix` in
-`~/.config/wing/templates/common/` and it beats the bundled one, while `.gitignore`, `PROJECT` and
+`~/.config/wing/templates/common/` and it beats the bundled one, while `.gitignore` and
 `README.md` still come from the bundled tree.
 
 A `common/` is shared extras, not a requirement — a template that only has its own files works.

@@ -10,17 +10,16 @@
 
 local make = oslo.make
 
--- Name and version live in PROJECT, one per line, so every tool reads them from one place.
-local function project()
-  local found = {}
-  for line in (oslo.fs.read("PROJECT") or ""):gmatch("[^\n]+") do
-    local value = line:match("^%s*([^#%[%s]%S*)%s*$")
-    if value then found[#found + 1] = value end
-  end
-  return found[1] or "{{kebab_name}}", found[2] or "0.1.0"
-end
-
-local NAME, VERSION = project()
+-- Zig keeps a package's version in build.zig.zon, but that file also needs a `fingerprint` that is
+-- unique to each project and that zig itself generates -- so a template cannot ship one. An app
+-- does not need the manifest at all, so the version is the latest git tag instead, which is what
+-- `make release` creates. Before the first release there is nothing to report, and "0.0.0" says so.
+local NAME = "{{kebab_name}}"
+local VERSION = (function()
+  local tag = oslo.run{ "git", "describe", "--tags", "--abbrev=0", capture = true }
+  if not tag.ok then return "0.0.0" end
+  return (tag.out or ""):match("^%s*v?([^%s]+)") or "0.0.0"
+end)()
 local PREFIX = os.getenv("PREFIX") or (os.getenv("HOME") .. "/.local")
 
 ------------------------------------------------------------------ what was built

@@ -10,17 +10,10 @@
 
 local make = oslo.make
 
--- Name and version live in PROJECT, one per line, so every tool reads them from one place.
-local function project()
-  local found = {}
-  for line in (oslo.fs.read("PROJECT") or ""):gmatch("[^\n]+") do
-    local value = line:match("^%s*([^#%[%s]%S*)%s*$")
-    if value then found[#found + 1] = value end
-  end
-  return found[1] or "{{kebab_name}}", found[2] or "0.1.0"
-end
-
-local NAME, VERSION = project()
+-- The name is fixed at generation time; the version comes from shard.yml, the language's own
+-- manifest and the file `veri` rewrites when `make release` cuts a version. One source, and it is not a file wing invented.
+local NAME = "{{kebab_name}}"
+local VERSION = ((oslo.fs.read("shard.yml") or ""):match('version:%s*([%d%.]+)')) or "0.0.0"
 local PREFIX = os.getenv("PREFIX") or (os.getenv("HOME") .. "/.local")
 
 ------------------------------------------------------------------ what was built
