@@ -215,10 +215,12 @@ recipes.</p>
 </tbody></table>
 </div>
 <h3 id="a-generated-project-is-a-repository"><a class="header" href="#a-generated-project-is-a-repository">A generated project is a repository</a></h3>
-<p><code>wing template apply</code> finishes by running <code>git init</code> and <code>git flow init -d --preset=classic</code>, so a
-new project starts on <code>develop</code> with <code>main</code> beside it and the <code>feature/</code>, <code>release/</code> and <code>hotfix/</code>
-prefixes configured. The recipes assume this: <code>make release</code> runs <code>git-rel</code>, which refuses to run
-anywhere but <code>develop</code>.</p>
+<p><code>wing template apply</code> finishes by running <code>git init</code>, staging what it wrote, and <code>git flow init -d --preset=classic</code>, so a new project starts on <code>develop</code> with <code>main</code> beside it, the <code>feature/</code>,
+<code>release/</code> and <code>hotfix/</code> prefixes configured, and one commit holding the generated files. The
+recipes assume this: <code>make release</code> runs <code>git-rel</code>, which refuses to run anywhere but <code>develop</code>.</p>
+<p>Staging is not a nicety. A flake only sees files git knows about, so a repository where nothing is
+tracked answers <code>nix develop</code> with <code>Path 'flake.nix' ... is not tracked by Git</code> — and <code>.env.lua</code>
+brings that shell up on every <code>cd</code>.</p>
 <p>Three cases leave it alone, each saying so on the last line of the apply:</p>
 <ul>
 <li><code>--no-git</code>, for generating something that is not a project of its own</li>
