@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.7.2] - 2026-08-23
+
+### <!-- 0 -->⛰️  Features
+
+- Make configs installs config/ into the config dir
+- One nix release workflow on v* tags
+- Ship an MIT LICENSE
+- Init git and git-flow on apply
+
+### <!-- 1 -->🐛 Bug Fixes
+
+- Stage generated files for nix
+- Derive go, d and python versions
+
+### <!-- 2 -->🚜 Refactor
+
+- Drop PROJECT for native manifests
+
+### <!-- 7 -->⚙️ Miscellaneous Tasks
+
+- Track AGENTS.md again
+- Say why agent notes are ignored
+- Ignore agent notes and plans
+
 ## [0.7.1] - 2026-08-23
 
 ### <!-- 0 -->⛰️  Features
