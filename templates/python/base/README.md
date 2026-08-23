@@ -12,10 +12,25 @@ Enter the Nix shell with `direnv allow` or `nix develop --impure`.
 ## Commands
 
 ```sh
+make                      # the recipes, with what each of them says it does
 make setup
 make build
-make run ARGS='--help'
+make run --args='--help'
 make test
 make verify
-make release TYPE=patch
+make release --type patch
+```
+
+## Requirements
+
+`.make.lua` and `.env.lua` are read by [oslo](https://github.com/termworks/oslo), which provides
+both the `make` task runner and the directory environment. Without it, `make` is whatever is on
+your `$PATH` and `.env.lua` is never loaded.
+
+```sh
+# at an oslo prompt in this directory
+make build
+
+# anywhere else
+oslo make build
 ```

@@ -20,3 +20,17 @@ make release --type patch
 
 The directory environment is `.env.lua`, loaded when you `cd` here and unloaded when you leave. It
 brings up the flake's dev shell and defines `_b`, `_r`, `_t`, `_v` and `_i` for the commands above.
+
+## Requirements
+
+`.make.lua` and `.env.lua` are read by [oslo](https://github.com/termworks/oslo), which provides
+both the `make` task runner and the directory environment. Without it, `make` is whatever is on
+your `$PATH` and `.env.lua` is never loaded.
+
+```sh
+# at an oslo prompt in this directory
+make build
+
+# anywhere else
+oslo make build
+```

@@ -23,6 +23,75 @@ end
 local NAME, VERSION = project()
 local PREFIX = os.getenv("PREFIX") or (os.getenv("HOME") .. "/.local")
 
+------------------------------------------------------------------ what was built
+
+local function dim(text)
+  return oslo.ui.style(text, { dim = true })
+end
+
+local function line(label, value)
+  print(dim(oslo.ui.pad(label, 8)) .. value)
+end
+
+-- `1524720` -> `1,524,720`. A number this long is read in groups or not at all.
+local function grouped(n)
+  local text = tostring(math.floor(n))
+  local out = text:sub(-3)
+  local at = #text - 3
+  while at > 0 do
+    out = text:sub(math.max(1, at - 2), at) .. "," .. out
+    at = at - 3
+  end
+  return out
+end
+
+-- Asked of the ELF, not assumed. `ldd` is not enough on its own: it prints "statically linked" for
+-- a binary that still carries an INTERP and will not start.
+local function linkage(path)
+  local segments = oslo.run{ "readelf", "-l", path, capture = true }
+  if not segments.ok then return nil end
+  local dynamic = oslo.run{ "readelf", "-d", path, capture = true }
+  if (segments.out or ""):find("program interpreter") or (dynamic.out or ""):find("NEEDED") then
+    return "dynamic"
+  end
+  return "static"
+end
+
+-- What was built, how big it is, and whether it needs anything on the target machine. Silent when
+-- the artifact is not there, so a recipe that builds nothing does not pretend it did.
+local function report(path)
+  local stat = oslo.fs.stat(path)
+  if not stat then return end
+  local megabytes = ("%.2f MB"):format(stat.size / 1048576)
+
+  print("")
+  print(oslo.ui.title(("%s %s   %s"):format(NAME, VERSION, megabytes)))
+  line("binary", path)
+  -- Bytes beside megabytes: `1.45 MB` cannot be subtracted from last week's `1.42 MB` to get one.
+  line("size", megabytes .. dim("   " .. grouped(stat.size) .. " bytes"))
+
+  local kind = linkage(path)
+  if kind == "static" then
+    line("linking", oslo.ui.style("✓ static", { fg = "green" }) ..
+                    dim("   no runtime dependencies"))
+  elseif kind == "dynamic" then
+    line("linking", oslo.ui.style("dynamic", { fg = "yellow" }) ..
+                    dim("   needs a matching libc on the target machine"))
+  end
+  print("")
+end
+
+-- The same, for artifacts whose exact path the build system decides. Walked with find rather than
+-- globbed: oslo's `**` matches a single directory level, and build trees nest deeper than that.
+local function report_found(root, pattern)
+  local found = oslo.run{ "find", root, "-type", "f", "-name", pattern, capture = true }
+  for path in (found.out or ""):gmatch("[^\n]+") do
+    report(path)
+    return
+  end
+end
+
+
 make.recipe{ name = "version", desc = "what this checkout calls itself",
              run = function() print(("%s v%s"):format(NAME, VERSION)) end }
 
@@ -67,7 +136,10 @@ local function nim_files()
 end
 
 make.recipe{ name = "build", desc = "the binary",
-             run = function() sh.nim("c", "-d:release", "--out:" .. NAME, ENTRY) end }
+             run = function()
+               sh.nim("c", "-d:release", "--out:" .. NAME, ENTRY)
+               report(NAME)
+             end }
 make.alias("b", "build")
 
 make.recipe{
