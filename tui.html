@@ -161,6 +161,29 @@ wing tui --command "project list"
 </code></pre>
 <p>Inside the TUI, <code>a</code> opens field-based add forms, <code>:</code> opens a command palette,
 and overlays support scrolling for long output.</p>
+<h2 id="the-views"><a class="header" href="#the-views">The views</a></h2>
+<div class="table-wrapper"><table><thead><tr><th></th><th></th></tr></thead><tbody>
+<tr><td><strong>Hosts</strong></td><td>every machine with projects on it, how many, which languages, and what it is — the same answer <code>wing hosts</code> gives</td></tr>
+<tr><td><strong>Projects</strong></td><td>every project with the host it lives on, its path and language</td></tr>
+<tr><td><strong>Machines</strong></td><td>the registry: user, addresses, tags, and the OS from the last <code>machine facts</code></td></tr>
+<tr><td><strong>Templates</strong></td><td>what <code>wing template list</code> shows</td></tr>
+<tr><td><strong>Sync</strong></td><td>the named sync targets</td></tr>
+</tbody></table>
+</div>
+<p>Hosts comes first because it is the question a dashboard is opened to answer: where is everything.
+A machine with no projects still gets a row, since "nothing here yet" and "no such machine" are
+different answers.</p>
+<p>The OS column on Hosts and Machines comes from whatever <code>wing machine facts</code> last collected, so it
+is blank until that has run once and is never gathered while the dashboard is opening.</p>
+<h2 id="keys"><a class="header" href="#keys">Keys</a></h2>
+<pre><code>↑/↓ move · ←/→ tabs · 1-9 jump to a tab · enter details
+s where · a add · d delete · / filter · : command · r reload · q quit
+</code></pre>
+<p><code>s</code> on a project shows how to reach it — the path if it is here, the ssh command if it is not. It
+prints rather than connects: the TUI owns the terminal, so it cannot hand it to ssh and give it
+back. Copy the line, or leave the TUI and run <code>wing ssh NAME</code>.</p>
+<p><code>enter</code> and <code>d</code> act on the project on <em>that host</em>: with the same name on two machines, the row you
+are on is the one that is opened or removed.</p>
 
                     </main>
 
