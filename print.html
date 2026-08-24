@@ -236,6 +236,52 @@ network interface on this machine — it labels the route, not the remote side.<
 <strong>authentication</strong> actually succeeds — the right test when "the port is open
 but my key is rejected" is the failure you care about.</li>
 </ul>
+<h2 id="tags-and-addressing-a-group"><a class="header" href="#tags-and-addressing-a-group">Tags, and addressing a group</a></h2>
+<p>A machine can carry tags, and a tag is how a command names a group without listing it — a list goes
+stale the moment the fleet changes.</p>
+<pre><code class="language-sh">wing machine add gpu-1 10.0.0.5 --tag gpu --tag lab
+wing machine tag gpu-1 cuda
+wing machine untag gpu-1 lab
+wing machine list                       # the Tags column
+</code></pre>
+<p>Every command below takes <code>NAME</code>, <code>--tag TAG</code> (repeatable), or <code>--all</code>.</p>
+<h2 id="running-a-command-on-machines"><a class="header" href="#running-a-command-on-machines">Running a command on machines</a></h2>
+<pre><code class="language-sh">wing machine run lab -- uptime
+wing machine run --tag gpu -- nvidia-smi --query-gpu=name --format=csv
+wing machine run --all --timeout 5000 -- 'systemctl is-active docker'
+wing machine run --tag gpu --quiet -- hostname | sort
+</code></pre>
+<p>Everything after <code>--</code> is handed to the remote shell as one string, so quoting is the remote's
+business rather than something that has to survive being split and rejoined here.</p>
+<p>Machines are contacted <strong>concurrently</strong> and the output is grouped under the machine that produced
+it, in name order — output that reorders itself between two runs cannot be compared, and comparing
+two runs is most of why you ran it. <code>--quiet</code> drops the headers for piping. The exit status is
+non-zero if any machine failed, and <code>--timeout</code> bounds the whole thing so one dead host cannot hang
+the rest.</p>
+<p><code>BatchMode</code> is forced on: nothing here is attached to a terminal, so a machine that wants a
+passphrase fails and says so instead of quietly waiting on a prompt nobody can see.</p>
+<h2 id="what-a-machine-is"><a class="header" href="#what-a-machine-is">What a machine is</a></h2>
+<pre><code class="language-sh">wing machine facts --all              # collect once, then read from cache
+wing machine facts --all --refresh    # ask again
+wing machine facts lab --json
+</code></pre>
+<p>One shell script per machine — os, kernel, arch, cpus, memory, disk, uptime — collected in a single
+round trip and kept in the data directory. It is not configuration: nobody edits it, and losing it
+costs one round trip.</p>
+<pre><code> Machine  OS                Arch    CPUs  Memory       Disk               Uptime
+ lab      Ubuntu 26.04 LTS  x86_64  24    14Gi / 58Gi  222G / 915G (26%)  up 12 hours
+</code></pre>
+<h2 id="moving-files"><a class="header" href="#moving-files">Moving files</a></h2>
+<pre><code class="language-sh">wing machine push ./dist/app lab:/srv/app/          # one or many sources
+wing machine push ./config --tag web /etc/myapp/    # the same file to a group
+wing machine pull lab:/var/log/app.log ./logs/
+wing machine push --dry-run ./big lab:/srv/
+</code></pre>
+<p>rsync over the same SSH options everything else uses, so a transfer shares the ControlMaster socket
+rather than opening a second connection. The remote side is the argument with the colon, which is
+what scp and rsync already taught your fingers.</p>
+<p><code>pull</code> takes exactly one machine: two would write to the same local path, and the second would
+silently win.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="templates"><a class="header" href="#templates">Templates</a></h1>
 <p>Templates are copied safely with conflict detection, optional dry-runs, and
 explicit symlink handling.</p>
@@ -530,6 +576,23 @@ in the third handler is not a reason to skip the fourth, which has nothing to do
 </code></pre>
 <p>A template silently missing from the listing would read as "wing lost my template" rather than
 "line 6 has a typo", so wing stops instead.</p>
+<h2 id="wing-doctor"><a class="header" href="#wing-doctor"><code>wing doctor</code></a></h2>
+<pre><code class="language-sh">wing doctor              # the local setup
+wing doctor --machines   # and whether every registered machine answers
+</code></pre>
+<p>One command for "why is this not working". It checks the tools wing shells out to (nix, oslo, git,
+rsync, ssh, git-flow, git-rel), the git identity a new project needs to make its first commit, that
+each store file parses rather than merely exists, that a template root is reachable and its
+templates have their files, and whether the env hook is loaded in this shell.</p>
+<p>Every failure prints the command that fixes it. A diagnosis you have to go and interpret is a second
+problem, not a solution to the first:</p>
+<pre><code> ! git identity      no user.name or user.email
+     → git config --global user.email you@example.com
+ ! env hook          not loaded in this shell
+     → add to your rc: eval "$(wing env hook bash)"
+</code></pre>
+<p>It exits non-zero only on a real failure; warnings are things to look at, not things that stopped
+working.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="templates-as-plugins"><a class="header" href="#templates-as-plugins">Templates as plugins</a></h1>
 <p>A template is a directory you can install from somewhere else, and it can carry logic of its own.
 It is still called a template, and the bundled ones still ship — what changed is that a template is
