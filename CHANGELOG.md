@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.7.3] - 2026-08-24
+
+### <!-- 0 -->⛰️  Features
+
+- Remote exec, tags, facts, transfer, doctor
+
 ## [0.7.2] - 2026-08-23
 
 ### <!-- 0 -->⛰️  Features
