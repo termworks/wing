@@ -94,3 +94,29 @@ otherwise and `host:name` is never ambiguous.
 ```sh
 cd "$(wing where api)"       # for a local project
 ```
+
+## What is uncommitted, everywhere
+
+```sh
+wing status                  # only what needs attention
+wing status --all            # including the clean ones
+wing status --machine lab
+wing status --local
+```
+
+One probe per machine, not per project — ten projects on one machine is one connection's worth of
+work. It reports dirty files, unpushed and behind commits, stashes, directories that are not
+repositories, and paths that have gone away:
+
+```
+local
+  wing              8 dirty   develop
+  hexe              8 dirty  1 unpushed   develop
+lab
+  drop              2 dirty   develop
+```
+
+Silence is the good outcome: a repository with nothing to say gets no line, so what is left on the
+screen is the list of things to deal with. `--all` adds the clean ones, and the "no upstream" note —
+kept out of the default because wing generates projects with a repository and no remote, so it would
+be true of every new project forever.

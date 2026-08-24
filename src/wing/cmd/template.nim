@@ -5,6 +5,8 @@ import std/[os, sequtils, strutils]
 import ../apply
 import ../builtins/registry
 import ./plugin
+import ./template_update
+import ../templates/provenance
 import ../builtins/flavours
 import ../builtins/install
 import ../repo
@@ -143,7 +145,7 @@ proc handleTemplate*(argsIn: seq[string]) =
         echo "Updated: " & displayStamp(tmpl.updatedAt)
         return
     die("Template '" & name & "' not found")
-  of "set", "update", "edit":
+  of "set", "edit":
     let description = popValue(args, ["-d", "--description", "--desc"])
     let templatePath = popValue(args, ["-p", "--path"])
     let language = popValue(args, ["-l", "--language"])
@@ -279,6 +281,13 @@ proc handleTemplate*(argsIn: seq[string]) =
     let skippedReplacements = applyTemplate(source.path, targetPath,
         renderedName, force, skipExisting, allowSymlinks)
     printList("Skipped placeholder replacements", skippedReplacements)
+
+    # What generated this, and what each file looked like when it did. Written before the git step
+    # so it lands in the first commit: a record that is not committed does not travel with the
+    # project, and travelling with it is the whole point.
+    writeProvenance(targetPath, recordOf(templateName, source.flavour,
+        renderedName, nowStamp(), targetPath))
+
     if not noGit:
       let repo = setupRepository(targetPath)
       let said = describe(repo)
@@ -290,6 +299,12 @@ proc handleTemplate*(argsIn: seq[string]) =
       else: ""
     echo "Template '" & templateName & "'" & flavourSuffix &
         " successfully applied to '" & targetPath & "'"
+  of "check", "outdated":
+    handleTemplateCheck(args)
+  of "diff":
+    handleTemplateDiff(args)
+  of "update", "sync":
+    handleTemplateUpdate(args)
   of "install":
     handleInstall(args)
   of "installed":

@@ -26,7 +26,10 @@ find "$root" -mindepth 1 -maxdepth "$depth" \
   ## parsing the path -- and `sort -u` collapses the several markers a polyglot project has.
 
 proc probeFor*(root: string; depth: int): string =
-  discoveryProbe.replace("%ROOT%", quoteShell(root)).replace("%DEPTH%", $depth)
+  ## `--depth 1` means "projects one directory down", the same as local discovery. The markers that
+  ## identify a project sit *inside* it, so find has to look one level deeper than the projects do.
+  discoveryProbe.replace("%ROOT%", quoteShell(root)).replace("%DEPTH%", $(
+      depth + 1))
 
 proc languageOf*(marker: string): string =
   case marker

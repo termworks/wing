@@ -239,3 +239,37 @@ plus one selected environment flavour overlay.
 A generated project is driven by `.make.lua` and `.env.lua` rather than a
 Makefile and an `.envrc`, so the same `make build` / `make test` / `make verify`
 recipes work in every language wing generates.
+
+### Keeping a project up to date with its template
+
+A template applied once is a copy: the day a workflow is fixed or a recipe added, every project
+already generated keeps the old one. These three commands are the other direction.
+
+```sh
+wing template check      # is this project behind its template
+wing template diff       # what the template would change
+wing template update     # take those changes
+wing template update --force   # …including the ones you also edited
+```
+
+They run in a generated project — from any directory inside it — and read `.wing.toml`, which
+`apply` writes at the top of the project. That file records the template, the flavour, the name it
+was generated with, and a hash of every file as it was written. **Commit it**: it has to travel with
+the project, and it lands in the first commit because it is written before `git init`.
+
+The hashes are what make the answer trustworthy. Comparing a project against a fresh render of the
+template gives three cases rather than one:
+
+| | |
+|---|---|
+| `update` | the template changed and nobody has touched this file here — safe to take |
+| `yours` | you edited it and the template did not move — left alone |
+| `conflict` | both — skipped, and `--force` is how you say the template wins |
+
+An update rewrites the hashes only for the files it actually wrote. Re-recording the whole tree
+would take your edits as "what the template wrote", and the next update would quietly revert them.
+
+A file the template no longer writes is reported and never deleted: it may have become the
+project's own, and no template change is worth removing work.
+
+`check` exits non-zero when a project is behind, so it works in CI.

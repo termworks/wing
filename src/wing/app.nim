@@ -8,6 +8,7 @@ import ./meta
 import ./util
 
 import ./cmd/shell
+import ./cmd/status
 import ./cmd/doctor
 import ./cmd/completions
 import ./cmd/data
@@ -57,6 +58,8 @@ proc main*() =
     handleDoctor(args)
   of "ssh", "connect", "go":
     handleSsh(args)
+  of "status", "st":
+    handleStatus(args)
   of "where", "path":
     handleWhere(args)
   of "data", "d":
