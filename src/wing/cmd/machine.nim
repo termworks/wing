@@ -4,6 +4,7 @@ import std/[os, osproc, sequtils, strutils]
 
 import ../cliargs
 import ../jsonfmt
+import ./machine_remote
 import ../ssh
 import ../store/machines
 import ../types
@@ -14,19 +15,28 @@ proc showMachineHelp() =
 Usage: wing machine <COMMAND>
 
 Commands:
-  add NAME IP[:PORT][:IFACE]... [--username USER] [--key KEY] [-J PROXY] [-A]
+  add NAME IP[:PORT][:IFACE]... [--username USER] [--key KEY] [-J PROXY] [-A] [--tag TAG]
   list [--raw]
   info NAME
   set NAME [--username USER] [--key KEY] [-J PROXY] [-A|--no-forward-agent]
   rename OLD NEW
   host add NAME IP[:PORT][:IFACE]...
   host remove NAME IFACE
+  run NAME -- COMMAND | run --all|--tag TAG -- COMMAND
+  facts NAME | facts --all|--tag TAG [--refresh]
+  push SOURCE... NAME:DEST [--all] [--tag TAG] [--dry-run]
+  pull NAME:SOURCE DEST [--dry-run]
+  tag NAME TAG...  |  untag NAME TAG...
   ssh-config [NAME]
   check NAME [--ssh] [--timeout MS]
   check --all [--ssh] [--timeout MS]
   pick
   connect NAME [--interface IFACE] [--command COMMAND] [--dry-run]
   remove NAME
+
+Selecting machines:
+  --all                     every registered machine
+  --tag TAG                 every machine carrying that tag (repeatable)
 
 SSH options:
   -J, --proxy-jump PROXY    ssh ProxyJump host
@@ -53,6 +63,7 @@ proc handleMachine*(argsIn: seq[string]) =
     let key = popValue(args, ["-k", "--key"], getHomeDir() / ".ssh" / "id_rsa")
     let proxyJump = popValue(args, ["-J", "--proxy-jump"])
     let forwardAgent = popFlag(args, ["-A", "--forward-agent"])
+    let tags = popValues(args, ["--tag", "--tags"])
     rejectUnknownOptions(args)
     requireArgs(args, 2, "wing machine add NAME IP[:PORT][:IFACE]... [options]")
     let name = args[0]
@@ -73,9 +84,13 @@ proc handleMachine*(argsIn: seq[string]) =
       machines[idx].key = key
       machines[idx].proxyJump = proxyJump
       machines[idx].forwardAgent = forwardAgent
+      for tag in tags:
+        if tag notin machines[idx].tags:
+          machines[idx].tags.add(tag)
     else:
       machines.add(Machine(name: name, username: username, key: key,
-          proxyJump: proxyJump, forwardAgent: forwardAgent, hosts: hosts))
+          proxyJump: proxyJump, forwardAgent: forwardAgent, tags: tags,
+          hosts: hosts))
     writeMachines(path, machines)
     echo "Machine '" & name & "' added successfully"
   of "list", "l", "ls":
@@ -92,12 +107,12 @@ proc handleMachine*(argsIn: seq[string]) =
               host.port & "\t" & host.iface
     else:
       echo table(
-        @["Name", "Username", "Hosts", "Key"],
+        @["Name", "Username", "Hosts", "Tags"],
         machines.mapIt(@[
           it.name,
           it.username,
           it.hosts.mapIt(it.ip & ":" & it.port & ":" & it.iface).join(", "),
-          noneIfEmpty(it.key)
+          noneIfEmpty(it.tags.join(", "))
         ])
       )
   of "info", "i", "show":
@@ -241,6 +256,35 @@ proc handleMachine*(argsIn: seq[string]) =
         quit(status)
     except CatchableError as e:
       die("Unable to start ssh: " & e.msg)
+  of "run", "exec", "x":
+    handleRun(args)
+  of "facts", "info-remote":
+    handleFacts(args)
+  of "push", "upload":
+    handlePush(args)
+  of "pull", "download":
+    handlePull(args)
+  of "tag", "untag":
+    let removing = command == "untag"
+    rejectUnknownOptions(args)
+    requireArgs(args, 2, "wing machine " & command & " NAME TAG...")
+    let name = args[0]
+    var found = -1
+    for i, machine in machines:
+      if machine.name == name:
+        found = i
+        break
+    if found < 0:
+      die("Machine '" & name & "' not found", 2)
+    for tag in args[1 .. ^1]:
+      let has = tag in machines[found].tags
+      if removing and has:
+        machines[found].tags.delete(machines[found].tags.find(tag))
+      elif not removing and not has:
+        machines[found].tags.add(tag)
+    writeMachines(path, machines)
+    echo name & ": " & (if machines[found].tags.len >
+        0: machines[found].tags.join(", ") else: "no tags")
   of "ssh-config", "config":
     rejectUnknownOptions(args)
     if args.len > 1:

@@ -7,6 +7,7 @@ import ./help
 import ./meta
 import ./util
 
+import ./cmd/doctor
 import ./cmd/completions
 import ./cmd/data
 import ./cmd/env
@@ -51,6 +52,8 @@ proc main*() =
     handleSync(args)
   of "init", "initialize":
     handleInit(args)
+  of "doctor", "check", "diagnose":
+    handleDoctor(args)
   of "data", "d":
     handleData(args)
   of "completions", "completion":

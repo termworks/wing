@@ -159,3 +159,28 @@ wing config: /home/me/.config/wing/init.lua:6: syntax error near 'is'
 
 A template silently missing from the listing would read as "wing lost my template" rather than
 "line 6 has a typo", so wing stops instead.
+
+## `wing doctor`
+
+```sh
+wing doctor              # the local setup
+wing doctor --machines   # and whether every registered machine answers
+```
+
+One command for "why is this not working". It checks the tools wing shells out to (nix, oslo, git,
+rsync, ssh, git-flow, git-rel), the git identity a new project needs to make its first commit, that
+each store file parses rather than merely exists, that a template root is reachable and its
+templates have their files, and whether the env hook is loaded in this shell.
+
+Every failure prints the command that fixes it. A diagnosis you have to go and interpret is a second
+problem, not a solution to the first:
+
+```
+ ! git identity      no user.name or user.email
+     → git config --global user.email you@example.com
+ ! env hook          not loaded in this shell
+     → add to your rc: eval "$(wing env hook bash)"
+```
+
+It exits non-zero only on a real failure; warnings are things to look at, not things that stopped
+working.

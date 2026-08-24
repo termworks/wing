@@ -21,6 +21,7 @@ proc showHelp*() =
   echo paint("Other commands:", "1;36")
   echo helpLine("init", "", "Initialize wing data and register templates",
       "1;34")
+  echo helpLine("doctor", "", "Check the setup and say what to fix", "1;34")
   echo helpLine("data", "", "Backup, restore, export, and import wing data",
       "1;34")
   echo helpLine("completions", "", "Generate shell completions", "1;34")

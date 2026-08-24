@@ -12,6 +12,9 @@ type
     key*: string
     proxyJump*: string
     forwardAgent*: bool
+    # What this machine is, so a command can name a group rather than a list: `--tag gpu` is one
+    # word where naming four machines is four words that go stale as the fleet changes.
+    tags*: seq[string]
     hosts*: seq[Host]
 
   Project* = object
