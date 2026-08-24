@@ -30,6 +30,7 @@ proc parseProjects*(path: string): seq[Project] =
       of "language": result[current].language = unquoteToml(value)
       of "framework": result[current].framework = unquoteToml(value)
       of "tags": result[current].tags = parseStringArray(value)
+      of "machine": result[current].machine = unquoteToml(value)
       of "created_at", "createdAt": result[current].createdAt = unquoteToml(value)
       of "updated_at", "updatedAt": result[current].updatedAt = unquoteToml(value)
       else: discard
@@ -53,6 +54,8 @@ proc writeProjects*(path: string; projects: seq[Project]) =
       if project.framework.len > 0: text.add("framework = " & tomlString(
           project.framework) & "\n")
       text.add("tags = " & tomlArray(project.tags) & "\n")
+      if project.machine.len > 0:
+        text.add("machine = " & tomlString(project.machine) & "\n")
       text.add("created_at = " & tomlString(project.createdAt) & "\n")
       text.add("updated_at = " & tomlString(project.updatedAt) & "\n\n")
   atomicWriteFile(path, text)

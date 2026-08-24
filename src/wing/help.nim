@@ -17,11 +17,15 @@ proc showHelp*() =
   echo helpLine("template", "t", "Project template management", "1;32")
   echo helpLine("env", "e", "direnv-style .envrc loader", "1;32")
   echo helpLine("sync", "s", "Sync a project to a remote machine over SSH", "1;32")
+  echo helpLine("ssh", "go", "Shell into a machine, or into a project wherever it is",
+      "1;32")
+  echo helpLine("hosts", "", "Which machines have projects, and how many", "1;32")
   echo ""
   echo paint("Other commands:", "1;36")
   echo helpLine("init", "", "Initialize wing data and register templates",
       "1;34")
   echo helpLine("doctor", "", "Check the setup and say what to fix", "1;34")
+  echo helpLine("where", "", "Print a project's path, or the ssh to reach it", "1;34")
   echo helpLine("data", "", "Backup, restore, export, and import wing data",
       "1;34")
   echo helpLine("completions", "", "Generate shell completions", "1;34")

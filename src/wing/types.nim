@@ -20,6 +20,9 @@ type
   Project* = object
     name*: string
     path*: string
+    # Which machine the path is on; empty means this one. A project registry that cannot say where
+    # a project lives is a list of paths that are only true on one computer.
+    machine*: string
     namespace*: string
     templateName*: string
     description*: string
