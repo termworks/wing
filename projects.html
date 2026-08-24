@@ -220,6 +220,43 @@ otherwise and <code>host:name</code> is never ambiguous.</p>
 <p><code>wing where</code> prints instead of entering, which is what a shell function wants:</p>
 <pre><code class="language-sh">cd "$(wing where api)"       # for a local project
 </code></pre>
+<h2 id="what-is-uncommitted-everywhere"><a class="header" href="#what-is-uncommitted-everywhere">What is uncommitted, everywhere</a></h2>
+<pre><code class="language-sh">wing status                  # only what needs attention
+wing status --all            # including the clean ones
+wing status --machine lab
+wing status --local
+</code></pre>
+<p>One probe per machine, not per project — ten projects on one machine is one connection's worth of
+work. It reports dirty files, unpushed and behind commits, stashes, directories that are not
+repositories, and paths that have gone away:</p>
+<pre><code>local
+  wing              8 dirty   develop
+  hexe              8 dirty  1 unpushed   develop
+lab
+  drop              2 dirty   develop
+</code></pre>
+<p>Silence is the good outcome: a repository with nothing to say gets no line, so what is left on the
+screen is the list of things to deal with. <code>--all</code> adds the clean ones, and the "no upstream" note —
+kept out of the default because wing generates projects with a repository and no remote, so it would
+be true of every new project forever.</p>
+<h2 id="getting-a-project-in"><a class="header" href="#getting-a-project-in">Getting a project in</a></h2>
+<p>A repository URL already says where a project belongs, so being asked for a path as well is being
+asked to repeat what you just typed.</p>
+<pre><code class="language-sh">wing project clone termworks/wing               # -&gt; ~/code/github.com/termworks/wing
+wing project clone git@gitlab.com:group/app.git
+wing project clone owner/repo --machine lab     # clone it on the server instead
+wing project clone owner/repo --root /srv --branch develop
+wing project adopt ~/old/checkout               # move it into the layout and register it
+wing project adopt . --in-place                 # register where it already is
+</code></pre>
+<p>The layout is <code>&lt;root&gt;/&lt;host&gt;/&lt;owner&gt;/&lt;name&gt;</code>, and <code>WING_CODE_ROOT</code> sets the root (default
+<code>~/code</code>). The point of a layout is that two machines end up agreeing about where a project is
+without either being told — which is what makes a registry of projects across machines readable.</p>
+<p>Cloning registers the project, with its language read off what arrived. <code>--machine</code> does the whole
+thing on that machine instead: clone there, register it as living there.</p>
+<p><code>adopt</code> reads the origin remote to work out where a checkout belongs, moves it, and registers it.
+A directory with no origin has nowhere to be filed, so it says so and <code>--in-place</code> is how you
+register it where it is.</p>
 
                     </main>
 

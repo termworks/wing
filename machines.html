@@ -242,6 +242,34 @@ rather than opening a second connection. The remote side is the argument with th
 what scp and rsync already taught your fingers.</p>
 <p><code>pull</code> takes exactly one machine: two would write to the same local path, and the second would
 silently win.</p>
+<h2 id="port-forwards-you-can-name"><a class="header" href="#port-forwards-you-can-name">Port forwards you can name</a></h2>
+<pre><code class="language-sh">wing machine tunnel add db lab --local 5433:localhost:5432
+wing machine tunnel add www lab --remote 8080:localhost:80
+wing machine tunnel add proxy lab --dynamic 1080
+wing machine tunnel start db
+wing machine tunnel list
+wing machine tunnel stop db
+</code></pre>
+<p>A forward is three numbers and a host, typed correctly, every time you want it. Naming one is the
+difference between remembering <code>-L 5433:localhost:5432</code> and typing <code>tunnel start db</code>.</p>
+<p>A tunnel gets its <strong>own</strong> ssh connection rather than the shared multiplexed one. With
+<code>ControlMaster</code> on, the forward is handed to the persistent master and the process wing started
+exits — leaving a working tunnel that <code>list</code> reports as down and <code>stop</code> cannot stop.</p>
+<p><code>--foreground</code> runs it in this terminal instead of the background, for when you want to watch it or
+kill it with ctrl-c.</p>
+<h2 id="an-ssh-config-for-everything-else"><a class="header" href="#an-ssh-config-for-everything-else">An ssh config for everything else</a></h2>
+<pre><code class="language-sh">wing machine ssh-config            # print it
+wing machine ssh-config lab
+wing machine ssh-config --write    # install it
+</code></pre>
+<p><code>--write</code> puts every machine into <code>~/.ssh/wing.config</code> and adds one <code>Include wing.config</code> line at
+the top of <code>~/.ssh/config</code>. After that, <code>ssh lab</code>, <code>scp file lab:/tmp</code>, <code>rsync</code>, and
+<code>git clone lab:/srv/repo.git</code> all work with no wing in the way.</p>
+<p>Each machine gets a block for its bare name, pointing at the route wing would take, and one per
+interface for reaching a specific route on purpose. The file is wing's — it is rewritten whole, so
+change the machine with <code>wing machine set</code> rather than editing it. The <code>Include</code> goes first because
+ssh takes the first value it sees for each option, so one added at the bottom loses to anything
+above it.</p>
 
                     </main>
 

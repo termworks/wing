@@ -336,6 +336,31 @@ plus one selected environment flavour overlay.</p>
 <p>A generated project is driven by <code>.make.lua</code> and <code>.env.lua</code> rather than a
 Makefile and an <code>.envrc</code>, so the same <code>make build</code> / <code>make test</code> / <code>make verify</code>
 recipes work in every language wing generates.</p>
+<h3 id="keeping-a-project-up-to-date-with-its-template"><a class="header" href="#keeping-a-project-up-to-date-with-its-template">Keeping a project up to date with its template</a></h3>
+<p>A template applied once is a copy: the day a workflow is fixed or a recipe added, every project
+already generated keeps the old one. These three commands are the other direction.</p>
+<pre><code class="language-sh">wing template check      # is this project behind its template
+wing template diff       # what the template would change
+wing template update     # take those changes
+wing template update --force   # …including the ones you also edited
+</code></pre>
+<p>They run in a generated project — from any directory inside it — and read <code>.wing.toml</code>, which
+<code>apply</code> writes at the top of the project. That file records the template, the flavour, the name it
+was generated with, and a hash of every file as it was written. <strong>Commit it</strong>: it has to travel with
+the project, and it lands in the first commit because it is written before <code>git init</code>.</p>
+<p>The hashes are what make the answer trustworthy. Comparing a project against a fresh render of the
+template gives three cases rather than one:</p>
+<div class="table-wrapper"><table><thead><tr><th></th><th></th></tr></thead><tbody>
+<tr><td><code>update</code></td><td>the template changed and nobody has touched this file here — safe to take</td></tr>
+<tr><td><code>yours</code></td><td>you edited it and the template did not move — left alone</td></tr>
+<tr><td><code>conflict</code></td><td>both — skipped, and <code>--force</code> is how you say the template wins</td></tr>
+</tbody></table>
+</div>
+<p>An update rewrites the hashes only for the files it actually wrote. Re-recording the whole tree
+would take your edits as "what the template wrote", and the next update would quietly revert them.</p>
+<p>A file the template no longer writes is reported and never deleted: it may have become the
+project's own, and no template change is worth removing work.</p>
+<p><code>check</code> exits non-zero when a project is behind, so it works in CI.</p>
 
                     </main>
 
