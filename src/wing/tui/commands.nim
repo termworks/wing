@@ -44,8 +44,6 @@ proc infoCommand*(section: DashboardSection; row: seq[string]): string =
     # [host, name, path, language] -- the host qualifies the name, since the same name can be a
     # different project on another machine.
     if row.len < 2: "" else: "project info " & quoteShell(row[0] & ":" & row[1])
-  of "Hosts":
-    "machine info " & quoteShell(row[0])
   of "Machines":
     "machine info " & quoteShell(row[0])
   of "Templates":

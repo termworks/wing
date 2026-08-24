@@ -294,7 +294,7 @@ method update(m: WingApp; msg: Msg): (Model, Cmd) =
         if row.len >= 2 and section.title == "Projects":
           let res = runCliCommand("where " & quoteShell(row[0] & ":" & row[1]))
           m.showOverlay("Where " & row[1] & " is", res.output)
-        elif row.len >= 1 and section.title in ["Hosts", "Machines"]:
+        elif row.len >= 1 and section.title == "Machines":
           let res = runCliCommand("ssh " & quoteShell(row[0]) & " --dry-run")
           m.showOverlay("Shell into " & row[0], res.output)
       elif key.matchString("d", "D", "delete"):

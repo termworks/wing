@@ -16,18 +16,17 @@ and overlays support scrolling for long output.
 
 | | |
 |---|---|
-| **Hosts** | every machine with projects on it, how many, which languages, and what it is — the same answer `wing hosts` gives |
-| **Projects** | every project with the host it lives on, its path and language |
-| **Machines** | the registry: user, addresses, tags, and the OS from the last `machine facts` |
+| **Projects** | every project with the machine it lives on, its path and language |
+| **Machines** | every machine: addresses, how many projects are on it, and what it is — plus a `local` row for this one |
 | **Templates** | what `wing template list` shows |
 | **Sync** | the named sync targets |
 
-Hosts comes first because it is the question a dashboard is opened to answer: where is everything.
-A machine with no projects still gets a row, since "nothing here yet" and "no such machine" are
-different answers.
+There is no separate "hosts" view: a machine *is* the host, and how many projects are on it is a
+column rather than a screen. This machine gets a `local` row even though it is not in the registry —
+a list that answers "where is everything" with everything except here is not answering.
 
-The OS column on Hosts and Machines comes from whatever `wing machine facts` last collected, so it
-is blank until that has run once and is never gathered while the dashboard is opening.
+The OS column comes from whatever `wing machine facts` last collected, so it is blank until that has
+run once, and is never gathered while the dashboard is opening.
 
 ## Keys
 

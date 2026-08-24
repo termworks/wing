@@ -79,39 +79,3 @@ proc discoverOnMachines*(root: string; depth: int; machineName: string;
   if not register:
     echo ""
     echo "--register to add these to the registry"
-
-proc handleHosts*(argsIn: seq[string]) =
-  ## `wing hosts` — which machines have projects on them, and how many.
-  ##
-  ## The question this whole feature exists to answer: from a laptop that talks to five servers,
-  ## "where is everything" should be one line each rather than five ssh sessions.
-  var args = argsIn
-  let raw = args.len > 0 and args[0] in ["-r", "--raw"]
-  let projects = parseProjects(ensureProjectsFile())
-  let machines = parseMachines(ensureMachinesFile())
-  let grouped = byHost(projects)
-
-  var rows: seq[seq[string]]
-  for group in grouped:
-    var languages: seq[string]
-    for project in group.items:
-      if project.language.len > 0 and project.language notin languages:
-        languages.add(project.language)
-    rows.add(@[group.host, $group.items.len, languages.join(", ")])
-
-  # A registered machine with nothing on it is still worth a row: "no projects here" and "no such
-  # machine" are different answers, and only one of them means you forgot to run discovery.
-  for machine in machines:
-    var seen = false
-    for group in grouped:
-      if group.host == machine.name:
-        seen = true
-        break
-    if not seen:
-      rows.add(@[machine.name, "0", ""])
-
-  if raw:
-    for row in rows:
-      echo row.join("\t")
-  else:
-    echo table(@["Host", "Projects", "Languages"], rows)

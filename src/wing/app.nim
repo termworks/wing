@@ -8,7 +8,6 @@ import ./meta
 import ./util
 
 import ./cmd/shell
-import ./cmd/project_remote
 import ./cmd/doctor
 import ./cmd/completions
 import ./cmd/data
@@ -44,7 +43,7 @@ proc main*() =
   case command
   of "project", "p", "projects", "proj":
     handleProject(args)
-  of "machine", "m", "machines", "host":
+  of "machine", "m", "machines", "host", "hosts":
     handleMachine(args)
   of "template", "t", "templates", "temp":
     handleTemplate(args)
@@ -60,8 +59,6 @@ proc main*() =
     handleSsh(args)
   of "where", "path":
     handleWhere(args)
-  of "hosts":
-    handleHosts(args)
   of "data", "d":
     handleData(args)
   of "completions", "completion":

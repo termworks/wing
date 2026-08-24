@@ -20,15 +20,16 @@ type
 proc isRemote*(project: Project): bool =
   project.machine.len > 0
 
-proc hostLabel*(project: Project): string =
-  ## What to show in a listing, and what qualifies a name. "local" rather than an empty cell: a
-  ## blank column reads as missing data, and where a project lives is the thing this makes obvious.
+proc machineLabel*(project: Project): string =
+  ## Which machine this project is on, for a listing and for qualifying a name. "local" rather than
+  ## an empty cell: a blank column reads as missing data, and "local" is a machine you do not have
+  ## to ssh to rather than a different kind of thing.
   if project.machine.len > 0: project.machine else: "local"
 
 proc qualifiedName*(project: Project): string =
-  ## Always host-qualified, this machine included. `local:api` has to be typable, or the answer to
+  ## Always machine-qualified, this one included. `local:api` has to be typable, or the answer to
   ## "which one did you mean" lists the name that was just rejected as ambiguous.
-  hostLabel(project) & ":" & project.name
+  machineLabel(project) & ":" & project.name
 
 proc splitQualified*(reference: string): tuple[machine, name: string] =
   ## `lab:api` -> ("lab", "api"); `api` -> ("", "api").
@@ -50,7 +51,7 @@ proc locate*(projects: seq[Project]; reference: string): seq[Located] =
       continue
     # `local:` names this machine, which is stored as no machine at all -- so the name a listing
     # shows is a name that can be typed back in.
-    if machine.len > 0 and machine != hostLabel(project):
+    if machine.len > 0 and machine != machineLabel(project):
       continue
     result.add(Located(project: project, qualified: qualifiedName(project)))
 
@@ -61,22 +62,22 @@ proc describeAmbiguity*(matches: seq[Located]): string =
   "'" & matches[0].project.name & "' is on " & $matches.len &
       " machines: " & names.join(", ") & " — name one of those instead"
 
-proc byHost*(projects: seq[Project]): seq[tuple[host: string;
+proc byMachine*(projects: seq[Project]): seq[tuple[machine: string;
     items: seq[Project]]] =
   ## Grouped for display, local first and the rest in the order they were registered. Sorting by
-  ## host would put a remote machine above the one you are sitting at, which is never what you
+  ## name would put a remote machine above the one you are sitting at, which is never what you
   ## wanted to read first.
   var order: seq[string]
   for project in projects:
-    let host = hostLabel(project)
-    if host notin order:
-      order.add(host)
+    let name = machineLabel(project)
+    if name notin order:
+      order.add(name)
   if "local" in order:
     order.delete(order.find("local"))
     order.insert("local", 0)
-  for host in order:
+  for name in order:
     var items: seq[Project]
     for project in projects:
-      if hostLabel(project) == host:
+      if machineLabel(project) == name:
         items.add(project)
-    result.add((host: host, items: items))
+    result.add((machine: name, items: items))

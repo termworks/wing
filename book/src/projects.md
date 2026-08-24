@@ -15,29 +15,31 @@ wing project import ~/code --dry-run
 ## Where a project lives
 
 A project is registered with the machine it is on. Nothing changes for projects on this machine —
-they simply have no host — but once a project is somewhere else, every question about it has two
-halves, and the registry answers both.
+they simply have no machine recorded — but once a project is somewhere else, every question about it
+has two halves, and the registry answers both.
 
 ```sh
 wing project add api --path /srv/api --machine lab
 wing project set api --machine local        # move it back to this machine
-wing project list                           # the Host column
+wing project list                           # the Machine column
 wing project list --machine lab             # only what is on lab
 wing project list --local
-wing hosts                                  # which machines have projects, and how many
+wing machine list                           # every machine, and how many projects are on it
 ```
 
 ```
- Host   Projects  Languages
- local  9         nim, go, rust, zig
- lab    8         go, d, zig, v, rust, cpp, nim
- build  0
+ Name   Username  Addresses           Tags  Projects  OS
+ lab    tester    10.0.0.1:22:local   gpu   8         Ubuntu 26.04
+ build  tester    10.0.0.2:22:local   None  0         unknown
+ local  -         -                   None  9         this machine
 ```
 
-A machine with no projects still gets a row: "nothing here yet" and "no such machine" are different
+There is no separate "hosts" registry — a machine is the host, and the project count is a column on
+it. This machine gets a `local` row even though it is not registered, because it holds projects too.
+A machine with none still gets a row: "nothing here yet" and "no such machine" are different
 answers, and only one of them means you have not run discovery.
 
-### Names are qualified by host
+### Names are qualified by machine
 
 The same name on two machines is two projects — a `deploy` on the build server and a `deploy` here
 are not the same thing, and on a laptop that talks to five servers there will be several such pairs.

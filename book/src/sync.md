@@ -93,5 +93,5 @@ wing sync project lab:api tron --direct     # run rsync on lab instead
 
 `--direct` is for when it is set up: rsync runs on the source machine and connects onward itself.
 
-`--register` records the copy, so `wing hosts` and `wing project list` show the project on both
-machines afterwards — which is the point of a host being part of a project's identity.
+`--register` records the copy, so `wing machine list` and `wing project list` show the project on
+both machines afterwards — which is the point of the machine being part of a project's identity.

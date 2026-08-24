@@ -29,21 +29,22 @@ doAssert blockedSsh.output.contains("Interactive ssh is disabled")
 import ../src/wing/types
 import ../src/wing/tui/commands
 
-# --- the commands the host views drive ----------------------------------------
-# Rows are read by position here too: a Projects row is [host, name, ...], so the command has to
-# qualify the name with the host or it acts on a project that happens to share a name.
+# --- the commands the machine views drive -------------------------------------
+# Rows are read by position here too: a Projects row is [machine, name, ...], so the command has to
+# qualify the name or it acts on a project that happens to share one.
 let projectsView = DashboardSection(title: "Projects",
-    headers: @["Host", "Name", "Path", "Language"])
+    headers: @["Machine", "Name", "Path", "Language"])
 let projectRow = @["lab", "api", "/srv/api", "go"]
 doAssert infoCommand(projectsView, projectRow) == "project info lab:api",
     infoCommand(projectsView, projectRow)
 doAssert deleteCommand(projectsView, projectRow) == "project remove lab:api",
     deleteCommand(projectsView, projectRow)
 
-let hostsView = DashboardSection(title: "Hosts",
-    headers: @["Host", "Projects", "Languages", "OS"])
-doAssert infoCommand(hostsView, @["lab", "8", "", ""]) == "machine info lab"
+let machinesView = DashboardSection(title: "Machines",
+    headers: @["Name", "User", "Addresses", "Projects", "OS"])
+doAssert infoCommand(machinesView, @["lab", "tester", "", "8", ""]) == "machine info lab"
 
-# A row with only a host and no project name cannot be acted on, and must not build half a command.
+# A row with only a machine and no project name cannot be acted on, and must not build half a
+# command.
 doAssert infoCommand(projectsView, @["lab"]) == ""
 doAssert deleteCommand(projectsView, @[]) == ""

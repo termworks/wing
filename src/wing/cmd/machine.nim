@@ -6,7 +6,10 @@ import ../cliargs
 import ../jsonfmt
 import ./machine_remote
 import ../ssh
+import ../machines/facts
+import ../projects/locate
 import ../store/machines
+import ../store/projects
 import ../types
 import ../util
 
@@ -106,15 +109,35 @@ proc handleMachine*(argsIn: seq[string]) =
           echo machine.name & "\t" & machine.username & "\t" & host.ip & "\t" &
               host.port & "\t" & host.iface
     else:
-      echo table(
-        @["Name", "Username", "Hosts", "Tags"],
-        machines.mapIt(@[
-          it.name,
-          it.username,
-          it.hosts.mapIt(it.ip & ":" & it.port & ":" & it.iface).join(", "),
-          noneIfEmpty(it.tags.join(", "))
+      # How many projects are on each machine, and what it is. Both are things you look up about a
+      # machine, so they live where the machines are listed rather than in a command of their own.
+      let projects = parseProjects(ensureProjectsFile())
+      let known = parseFacts(factsFile())
+      var rows: seq[seq[string]]
+      for machine in machines:
+        var count = 0
+        for project in projects:
+          if machineLabel(project) == machine.name:
+            count.inc
+        let idx = findFacts(known, machine.name)
+        rows.add(@[
+          machine.name,
+          machine.username,
+          machine.hosts.mapIt(it.ip & ":" & it.port & ":" & it.iface).join(
+              ", "),
+          noneIfEmpty(machine.tags.join(", ")),
+          $count,
+          if idx >= 0: unknownIfEmpty(known[idx].os) else: "unknown"
         ])
-      )
+      # This machine holds projects too, and it is not in the registry -- leaving it out would make
+      # a listing that answers "where is everything" with everything except here.
+      var localCount = 0
+      for project in projects:
+        if project.machine.len == 0:
+          localCount.inc
+      if localCount > 0:
+        rows.add(@["local", "-", "-", "None", $localCount, "this machine"])
+      echo table(@["Name", "Username", "Addresses", "Tags", "Projects", "OS"], rows)
   of "info", "i", "show":
     rejectUnknownOptions(args)
     requireArgs(args, 1, "wing machine info NAME")

@@ -19,7 +19,6 @@ proc showHelp*() =
   echo helpLine("sync", "s", "Sync a project to a remote machine over SSH", "1;32")
   echo helpLine("ssh", "go", "Shell into a machine, or into a project wherever it is",
       "1;32")
-  echo helpLine("hosts", "", "Which machines have projects, and how many", "1;32")
   echo ""
   echo paint("Other commands:", "1;36")
   echo helpLine("init", "", "Initialize wing data and register templates",

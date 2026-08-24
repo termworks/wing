@@ -28,51 +28,37 @@ proc loadDashboardData*(): DashboardData =
 
   var machineRows: seq[seq[string]] = @[]
   for machine in machines:
+    var count = 0
+    for project in projects:
+      if machineLabel(project) == machine.name:
+        count.inc
     let idx = findFacts(known, machine.name)
     machineRows.add(@[
       machine.name,
       machine.username,
       machine.hosts.mapIt(it.ip & ":" & it.port & ":" & it.iface).join(", "),
-      if machine.tags.len == 0: "None" else: machine.tags.join(", "),
+      $count,
       if idx >= 0: unknownIfEmpty(known[idx].os) else: "unknown"
     ])
 
-  # One row per machine that has projects, plus every registered machine that has none: "nothing
-  # here yet" and "no such machine" are different answers, and only one means discovery has not run.
-  var hostRows: seq[seq[string]] = @[]
-  for group in byHost(projects):
-    var languages: seq[string]
-    for project in group.items:
-      if project.language.len > 0 and project.language notin languages:
-        languages.add(project.language)
-    let idx = findFacts(known, group.host)
-    hostRows.add(@[
-      group.host,
-      $group.items.len,
-      languages.join(", "),
-      if idx >= 0: unknownIfEmpty(known[idx].os) else: ""
-    ])
-  for machine in machines:
-    if not hostRows.anyIt(it[0] == machine.name):
-      let idx = findFacts(known, machine.name)
-      hostRows.add(@[machine.name, "0", "",
-          if idx >= 0: unknownIfEmpty(known[idx].os) else: ""])
+  # This machine is not in the registry but holds projects, so it gets a row too: a list that
+  # answers "where is everything" with everything except here is not answering.
+  var localCount = 0
+  for project in projects:
+    if project.machine.len == 0:
+      localCount.inc
+  if localCount > 0:
+    machineRows.add(@["local", "-", "-", $localCount, "this machine"])
 
   result = DashboardData(
     dataDir: dataRoot(),
     sections: @[
       DashboardSection(
-        title: "Hosts",
-        empty: "No hosts yet. Register machines, then: wing project discover PATH --machine NAME",
-        headers: @["Host", "Projects", "Languages", "OS"],
-        rows: hostRows
-  ),
-      DashboardSection(
         title: "Projects",
         empty: "No projects yet. Add one with: wing project add NAME --path PATH",
-        headers: @["Host", "Name", "Path", "Language"],
+        headers: @["Machine", "Name", "Path", "Language"],
         rows: projects.mapIt(@[
-          hostLabel(it),
+          machineLabel(it),
           it.name,
           it.path,
           noneIfEmpty(it.language)
@@ -81,7 +67,7 @@ proc loadDashboardData*(): DashboardData =
       DashboardSection(
         title: "Machines",
         empty: "No machines yet. Add one with: wing machine add NAME IP[:PORT][:IFACE]",
-        headers: @["Name", "User", "Hosts", "Tags", "OS"],
+        headers: @["Name", "User", "Addresses", "Projects", "OS"],
         rows: machineRows
   ),
   DashboardSection(

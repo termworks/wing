@@ -75,7 +75,7 @@ proc destinationEndpoint(projects: seq[Project]; machines: seq[Machine];
   var path = override
   if path.len == 0:
     for project in projects:
-      if project.name == projectName and hostLabel(project) == host:
+      if project.name == projectName and machineLabel(project) == host:
         path = project.path
         break
   if path.len == 0:

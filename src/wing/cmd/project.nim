@@ -158,14 +158,14 @@ proc handleProject*(argsIn: seq[string]) =
       printJsonArray(filtered, projectJson)
     elif raw:
       for project in filtered:
-        echo hostLabel(project) & "\t" & project.name & "\t" &
+        echo machineLabel(project) & "\t" & project.name & "\t" &
             project.namespace & "\t" & project.path & "\t" &
             unknownIfEmpty(project.language)
     else:
       echo table(
-        @["Host", "Name", "Path", "Language", "Tags", "Created"],
+        @["Machine", "Name", "Path", "Language", "Tags", "Created"],
         filtered.mapIt(@[
-          hostLabel(it),
+          machineLabel(it),
           it.name,
           it.path,
           noneIfEmpty(it.language),
@@ -183,10 +183,10 @@ proc handleProject*(argsIn: seq[string]) =
     let wanted = if onMachine.len > 0: onMachine else: fromRef
     for project in projects:
       if project.name == name and project.namespace == namespace and
-          (wanted.len == 0 or hostLabel(project) == wanted):
+          (wanted.len == 0 or machineLabel(project) == wanted):
         echo "Project: " & project.name
         echo "Path: " & project.path
-        echo "Host: " & hostLabel(project)
+        echo "Host: " & machineLabel(project)
         echo "Namespace: " & project.namespace
         echo "Template: " & noneIfEmpty(project.templateName)
         echo "Description: " & noneIfEmpty(project.description)
@@ -210,8 +210,8 @@ proc handleProject*(argsIn: seq[string]) =
       var hosts: seq[string]
       for project in projects:
         if project.name == name and project.namespace == namespace and
-            hostLabel(project) notin hosts:
-          hosts.add(hostLabel(project))
+            machineLabel(project) notin hosts:
+          hosts.add(machineLabel(project))
       if hosts.len > 1:
         die("'" & name & "' is on " & $hosts.len & " machines: " &
             hosts.mapIt(it & ":" & name).join(", ") &
@@ -219,7 +219,7 @@ proc handleProject*(argsIn: seq[string]) =
     let before = projects.len
     projects = projects.filterIt(not (it.name == name and
         it.namespace == namespace and
-        (wanted.len == 0 or hostLabel(it) == wanted)))
+        (wanted.len == 0 or machineLabel(it) == wanted)))
     if projects.len == before:
       die("Project '" & args[0] & "' not found in namespace '" & namespace & "'")
     writeProjects(path, projects)

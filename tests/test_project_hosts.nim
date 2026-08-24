@@ -18,7 +18,7 @@ discard checked(wing & "project add solo --path /home/me/solo")
 
 # --- a listing says where each project is -------------------------------------
 let listed = checked(wing & "project list")
-doAssert listed.contains("Host"), listed
+doAssert listed.contains("Machine"), listed
 doAssert listed.contains("lab"), listed
 doAssert listed.contains("local"), listed
 
@@ -30,10 +30,13 @@ let localOnly = checked(wing & "project list --local")
 doAssert localOnly.contains("/home/me/api"), localOnly
 doAssert not localOnly.contains("/srv/api"), localOnly
 
-# --- hosts answers "where is everything" --------------------------------------
-let hosts = checked(wing & "hosts")
-doAssert hosts.contains("lab"), hosts
-doAssert hosts.contains("local"), hosts
+# --- the machine listing answers "where is everything" ------------------------
+# There is no separate hosts registry: a machine is the thing, and the count is a column on it.
+let listing = checked(wing & "machine list")
+doAssert listing.contains("Projects"), listing
+doAssert listing.contains("lab"), listing
+# This machine holds projects and is not in the registry, so it gets a row of its own.
+doAssert listing.contains("local"), listing
 
 # --- a bare name that means two projects is refused, and both are typable -----
 let ambiguous = run(wing & "where api")
