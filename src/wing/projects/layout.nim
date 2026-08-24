@@ -24,8 +24,13 @@ proc parseRepoRef*(reference: string): RepoRef =
   if value.len == 0:
     return
 
-  if value.startsWith("git@") or (value.contains('@') and value.contains(
-      ':') andnot value.contains("://")):
+  # Named rather than one long condition: wrapped across a line, nimpretty joins `and not` into
+  # `andnot`, which is not an operator and does not compile. Short lines have nothing to wrap.
+  let hasAt = '@' in value
+  let hasColon = ':' in value
+  let hasScheme = "://" in value
+
+  if value.startsWith("git@") or (hasAt and hasColon and not hasScheme):
     # scp-style: user@host:owner/name
     let at = value.find('@')
     let colon = value.find(':')
