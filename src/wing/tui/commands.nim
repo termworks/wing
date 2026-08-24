@@ -41,8 +41,11 @@ proc infoCommand*(section: DashboardSection; row: seq[string]): string =
     return ""
   case section.title
   of "Projects":
-    let namespace = if row.len > 1: row[1] else: "default"
-    "project --namespace " & quoteShell(namespace) & " info " & quoteShell(row[0])
+    # [host, name, path, language] -- the host qualifies the name, since the same name can be a
+    # different project on another machine.
+    if row.len < 2: "" else: "project info " & quoteShell(row[0] & ":" & row[1])
+  of "Hosts":
+    "machine info " & quoteShell(row[0])
   of "Machines":
     "machine info " & quoteShell(row[0])
   of "Templates":
@@ -57,8 +60,7 @@ proc deleteCommand*(section: DashboardSection; row: seq[string]): string =
     return ""
   case section.title
   of "Projects":
-    let namespace = if row.len > 1: row[1] else: "default"
-    "project --namespace " & quoteShell(namespace) & " remove " & quoteShell(row[0])
+    if row.len < 2: "" else: "project remove " & quoteShell(row[0] & ":" & row[1])
   of "Machines":
     "machine remove " & quoteShell(row[0])
   of "Templates":

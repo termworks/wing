@@ -174,13 +174,19 @@ proc handleProject*(argsIn: seq[string]) =
         ])
       )
   of "info", "i", "show":
+    let onMachine = popValue(args, ["-m", "--machine"])
     rejectUnknownOptions(args)
-    requireArgs(args, 1, "wing project info NAME")
-    let name = args[0]
+    requireArgs(args, 1, "wing project info NAME [--machine HOST]")
+    # A name can mean a project on more than one machine, so `HOST:NAME` and `--machine` both
+    # narrow it; without either, the first match still answers, as it always did.
+    let (fromRef, name) = splitQualified(args[0])
+    let wanted = if onMachine.len > 0: onMachine else: fromRef
     for project in projects:
-      if project.name == name and project.namespace == namespace:
+      if project.name == name and project.namespace == namespace and
+          (wanted.len == 0 or hostLabel(project) == wanted):
         echo "Project: " & project.name
         echo "Path: " & project.path
+        echo "Host: " & hostLabel(project)
         echo "Namespace: " & project.namespace
         echo "Template: " & noneIfEmpty(project.templateName)
         echo "Description: " & noneIfEmpty(project.description)
@@ -191,15 +197,31 @@ proc handleProject*(argsIn: seq[string]) =
         echo "Created: " & displayStamp(project.createdAt)
         echo "Updated: " & displayStamp(project.updatedAt)
         return
-    die("Project '" & name & "' not found in namespace '" & namespace & "'")
+    die("Project '" & args[0] & "' not found in namespace '" & namespace & "'")
   of "remove", "rm", "delete", "del":
+    let onMachine = popValue(args, ["-m", "--machine"])
     rejectUnknownOptions(args)
-    requireArgs(args, 1, "wing project remove NAME")
-    let name = args[0]
+    requireArgs(args, 1, "wing project remove NAME [--machine HOST]")
+    let (fromRef, name) = splitQualified(args[0])
+    let wanted = if onMachine.len > 0: onMachine else: fromRef
+    # Unqualified, a name can now mean a project on several machines -- and removing all of them
+    # because one was asked for is not a reading anybody intended. Naming one is the way out.
+    if wanted.len == 0:
+      var hosts: seq[string]
+      for project in projects:
+        if project.name == name and project.namespace == namespace and
+            hostLabel(project) notin hosts:
+          hosts.add(hostLabel(project))
+      if hosts.len > 1:
+        die("'" & name & "' is on " & $hosts.len & " machines: " &
+            hosts.mapIt(it & ":" & name).join(", ") &
+            " — name one of those instead", 2)
     let before = projects.len
-    projects = projects.filterIt(not (it.name == name and it.namespace == namespace))
+    projects = projects.filterIt(not (it.name == name and
+        it.namespace == namespace and
+        (wanted.len == 0 or hostLabel(it) == wanted)))
     if projects.len == before:
-      die("Project '" & name & "' not found in namespace '" & namespace & "'")
+      die("Project '" & args[0] & "' not found in namespace '" & namespace & "'")
     writeProjects(path, projects)
     echo "Project '" & name & "' removed from namespace '" & namespace & "'"
   of "set", "update", "edit":

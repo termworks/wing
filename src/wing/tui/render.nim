@@ -38,6 +38,7 @@ proc titleColor*(title: string): Color =
 
 proc sectionIcon*(title: string): string =
   case title
+  of "Hosts": "⬢"
   of "Projects": "◆"
   of "Machines": "●"
   of "Templates": "◇"
@@ -49,14 +50,28 @@ proc rowParts*(section: DashboardSection; row: seq[string]): tuple[
   let title = section.title
   result.name = if row.len > 0: row[0] else: ""
   case title
+  of "Hosts":
+    # [host, projects, languages, os]
+    result.right = (if row.len > 1: row[1] else: "0") & " projects"
+    # "no languages known" and "no projects here" are different things to say, and saying the
+    # second when the first is true reads as an empty machine that is not empty.
+    result.meta =
+      if row.len > 2 and row[2].len > 0: row[2]
+      elif row.len > 1 and row[1] == "0": "nothing registered here yet"
+      else: "—"
+    result.desc = if row.len > 3: dash(row[3]) else: "—"
   of "Projects":
+    # [host, name, path, language] -- the project is the name, the host is where it is.
+    result.name = if row.len > 1: row[1] else: ""
     result.right = if row.len > 3: dash(row[3]) else: "—"
-    result.meta = "namespace " & (if row.len > 1: dash(row[1]) else: "—")
+    result.meta = "on " & (if row.len > 0: dash(row[0]) else: "—")
     result.desc = if row.len > 2: dash(row[2]) else: "—"
   of "Machines":
+    # [name, user, hosts, tags, os]
     result.right = if row.len > 1: dash(row[1]) else: "—"
     result.meta = if row.len > 2: dash(row[2]) else: "—"
-    result.desc = "key " & (if row.len > 3: dash(row[3]) else: "—")
+    result.desc = (if row.len > 4: dash(row[4]) else: "—") & "  ·  tags " &
+        (if row.len > 3: dash(row[3]) else: "—")
   of "Templates":
     result.right = if row.len > 3: dash(row[3]) else: "—"
     result.meta = if row.len > 1: dash(row[1]) else: "—"
@@ -113,7 +128,7 @@ proc statusLine*(state: ViewState; width: int): string =
 
 proc helpLine*(width: int): string =
   newStyle().foreground(cMuted).render(truncate(
-      "↑/↓ move · ←/→ tabs · enter details · a add · d delete · / filter · : command · r reload · q quit",
+      "↑/↓ move · ←/→ tabs · enter details · s where · a add · d delete · / filter · : command · q quit",
       width, "…"))
 
 proc dashboardBody*(m: WingApp): string =

@@ -262,26 +262,16 @@ method update(m: WingApp; msg: Msg): (Model, Cmd) =
         dec m.state.cursor, rowCapacity(m.height)
       elif key.matchString("pgdown"):
         inc m.state.cursor, rowCapacity(m.height)
-      elif key.matchString("1"):
-        m.state.section = 0
-        m.state.cursor = 0
-        m.state.scroll = 0
-        m.state.filter = ""
-      elif key.matchString("2"):
-        m.state.section = 1
-        m.state.cursor = 0
-        m.state.scroll = 0
-        m.state.filter = ""
-      elif key.matchString("3"):
-        m.state.section = 2
-        m.state.cursor = 0
-        m.state.scroll = 0
-        m.state.filter = ""
-      elif key.matchString("4"):
-        m.state.section = 3
-        m.state.cursor = 0
-        m.state.scroll = 0
-        m.state.filter = ""
+      elif key.matchString("1", "2", "3", "4", "5", "6", "7", "8", "9"):
+        # Numbered by what is on screen rather than one branch per key: sections are data, and a
+        # key that jumps to a section that does not exist should do nothing rather than blank the
+        # view.
+        for index in 0 .. 8:
+          if key.matchString($(index + 1)) and index <= m.data.sections.high:
+            m.state.section = index
+            m.state.cursor = 0
+            m.state.scroll = 0
+            m.state.filter = ""
       elif key.matchString("/"):
         m.showPrompt(promptFilter, "Filter " & currentSection(m.data,
             m.state).title, m.state.filter)
@@ -296,6 +286,17 @@ method update(m: WingApp; msg: Msg): (Model, Cmd) =
         if command.len > 0:
           let res = runCliCommand(command)
           m.showOverlay("Details (" & $res.code & ")", res.output)
+      elif key.matchString("s", "S"):
+        # The TUI cannot hand its terminal to ssh, so this shows the command instead of pretending
+        # to run it -- copyable, and honest about which machine it would reach.
+        let section = currentSection(m.data, m.state)
+        let row = selectedRow(m.data, m.state)
+        if row.len >= 2 and section.title == "Projects":
+          let res = runCliCommand("where " & quoteShell(row[0] & ":" & row[1]))
+          m.showOverlay("Where " & row[1] & " is", res.output)
+        elif row.len >= 1 and section.title in ["Hosts", "Machines"]:
+          let res = runCliCommand("ssh " & quoteShell(row[0]) & " --dry-run")
+          m.showOverlay("Shell into " & row[0], res.output)
       elif key.matchString("d", "D", "delete"):
         let section = currentSection(m.data, m.state)
         let row = selectedRow(m.data, m.state)
