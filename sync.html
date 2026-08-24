@@ -202,6 +202,31 @@ wing sync remove NAME
 <p>One endpoint is always the local machine. Sync targets resolve the project and
 machine from the existing registries, so adding <code>--proxy-jump</code>/<code>--forward-agent</code>
 to the machine automatically applies to its sync targets too.</p>
+<h2 id="syncing-a-project-between-hosts"><a class="header" href="#syncing-a-project-between-hosts">Syncing a project between hosts</a></h2>
+<p>The commands above are a registry of named targets you set up once and run again. This is the other
+half: an ad-hoc copy between two machines, named the way everything else names projects.</p>
+<pre><code class="language-sh">wing sync project api tron                  # this project, onto that machine
+wing sync project lab:api local             # bring it back
+wing sync project lab:api tron:api          # between two machines
+wing sync project api tron --to /srv/api    # a different path on the far side
+wing sync project api tron --delete --exclude target --exclude .direnv
+wing sync project api tron --dry-run        # print the plan, touch nothing
+wing sync project api tron --register       # …and record it as a project on tron
+</code></pre>
+<p><code>SOURCE</code> is a registered project (<code>name</code>, or <code>host:name</code> when the bare name is ambiguous).
+<code>DEST</code> is a machine, or a project on one. A machine on its own means <em>the same project, over there</em>,
+which saves registering it before the first copy.</p>
+<p><strong>Where it lands</strong>, in order: <code>--to</code> if given; else the path the destination's own registry entry
+has; else the source's path, which keeps a project in the same place on every machine.</p>
+<p><strong>When neither end is this machine</strong>, the bytes are relayed through here — down, then up. That is
+twice the transfer and still the right default: rsync cannot talk between two remote hosts on its
+own, and the alternative needs the source to be able to ssh to the destination, which usually is not
+set up and fails confusingly when it is not.</p>
+<pre><code class="language-sh">wing sync project lab:api tron --direct     # run rsync on lab instead
+</code></pre>
+<p><code>--direct</code> is for when it is set up: rsync runs on the source machine and connects onward itself.</p>
+<p><code>--register</code> records the copy, so <code>wing hosts</code> and <code>wing project list</code> show the project on both
+machines afterwards — which is the point of a host being part of a project's identity.</p>
 
                     </main>
 
