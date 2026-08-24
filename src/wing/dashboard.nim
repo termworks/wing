@@ -8,6 +8,7 @@ import ./storage
 import ./store/machines
 import ./store/projects
 import ./store/syncs
+import ./builtins/install
 import ./store/templates
 import ./types
 import ./util
@@ -19,7 +20,15 @@ proc loadDashboardData*(): DashboardData =
 
   let projects = parseProjects(projectPath)
   let machines = parseMachines(machinePath)
-  let templates = parseTemplates(templatePath)
+  # What can actually be applied, which is the registry plus whatever the tree declares.
+  #
+  # `cast(gcsafe)` because the declared templates come from a Lua state the process keeps open, held
+  # in module globals -- so reading them is not GC-safe by Nim's rules, and the TUI's `update` is an
+  # override that must be. wing is single-threaded and that state is per-process, so the thing the
+  # rule protects against cannot happen here.
+  var templates: seq[Template]
+  {.cast(gcsafe).}:
+    templates = allTemplates(parseTemplates(templatePath))
 
   # What each machine answered when facts were last collected, if they ever were. A dashboard that
   # can say "aarch64, 8 cpus" without asking is worth more than one that only repeats what was typed

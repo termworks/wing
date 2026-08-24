@@ -107,6 +107,8 @@ proc handleTemplate*(argsIn: seq[string]) =
     let raw = popFlag(args, ["-r", "--raw"])
     let asJson = popFlag(args, ["--json"])
     rejectUnknownOptions(args)
+    # Everything usable, not only what the registry was last told about.
+    let templates = allTemplates(templates)
     if asJson:
       printJsonArray(templates, templateJson)
     elif raw:
@@ -128,7 +130,7 @@ proc handleTemplate*(argsIn: seq[string]) =
     rejectUnknownOptions(args)
     requireArgs(args, 1, "wing template info NAME")
     let name = args[0]
-    for tmpl in templates:
+    for tmpl in allTemplates(templates):
       if tmpl.name == name:
         echo "Template: " & tmpl.name
         echo "Description: " & tmpl.description
@@ -228,15 +230,10 @@ proc handleTemplate*(argsIn: seq[string]) =
       die("--force and --skip-existing cannot be used together", 2)
     let templateName = args[0]
     let targetPath = args[1]
-    var found: Template
-    var hasFound = false
-    for tmpl in templates:
-      if tmpl.name == templateName:
-        found = tmpl
-        hasFound = true
-        break
-    if not hasFound:
+    let resolved = resolveTemplate(templates, templateName)
+    if not resolved.found:
       die("Template '" & templateName & "' not found")
+    let found = resolved.tmpl
 
     let source = templateSourceForFlavour(found, flavour, hasFlavour)
     let renderedName = effectiveProjectName(projectName, targetPath)
