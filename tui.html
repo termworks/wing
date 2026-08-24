@@ -163,18 +163,17 @@ wing tui --command "project list"
 and overlays support scrolling for long output.</p>
 <h2 id="the-views"><a class="header" href="#the-views">The views</a></h2>
 <div class="table-wrapper"><table><thead><tr><th></th><th></th></tr></thead><tbody>
-<tr><td><strong>Hosts</strong></td><td>every machine with projects on it, how many, which languages, and what it is — the same answer <code>wing hosts</code> gives</td></tr>
-<tr><td><strong>Projects</strong></td><td>every project with the host it lives on, its path and language</td></tr>
-<tr><td><strong>Machines</strong></td><td>the registry: user, addresses, tags, and the OS from the last <code>machine facts</code></td></tr>
+<tr><td><strong>Projects</strong></td><td>every project with the machine it lives on, its path and language</td></tr>
+<tr><td><strong>Machines</strong></td><td>every machine: addresses, how many projects are on it, and what it is — plus a <code>local</code> row for this one</td></tr>
 <tr><td><strong>Templates</strong></td><td>what <code>wing template list</code> shows</td></tr>
 <tr><td><strong>Sync</strong></td><td>the named sync targets</td></tr>
 </tbody></table>
 </div>
-<p>Hosts comes first because it is the question a dashboard is opened to answer: where is everything.
-A machine with no projects still gets a row, since "nothing here yet" and "no such machine" are
-different answers.</p>
-<p>The OS column on Hosts and Machines comes from whatever <code>wing machine facts</code> last collected, so it
-is blank until that has run once and is never gathered while the dashboard is opening.</p>
+<p>There is no separate "hosts" view: a machine <em>is</em> the host, and how many projects are on it is a
+column rather than a screen. This machine gets a <code>local</code> row even though it is not in the registry —
+a list that answers "where is everything" with everything except here is not answering.</p>
+<p>The OS column comes from whatever <code>wing machine facts</code> last collected, so it is blank until that has
+run once, and is never gathered while the dashboard is opening.</p>
 <h2 id="keys"><a class="header" href="#keys">Keys</a></h2>
 <pre><code>↑/↓ move · ←/→ tabs · 1-9 jump to a tab · enter details
 s where · a add · d delete · / filter · : command · r reload · q quit

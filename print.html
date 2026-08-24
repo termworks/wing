@@ -194,23 +194,25 @@ wing project import ~/code --dry-run
 </code></pre>
 <h2 id="where-a-project-lives"><a class="header" href="#where-a-project-lives">Where a project lives</a></h2>
 <p>A project is registered with the machine it is on. Nothing changes for projects on this machine —
-they simply have no host — but once a project is somewhere else, every question about it has two
-halves, and the registry answers both.</p>
+they simply have no machine recorded — but once a project is somewhere else, every question about it
+has two halves, and the registry answers both.</p>
 <pre><code class="language-sh">wing project add api --path /srv/api --machine lab
 wing project set api --machine local        # move it back to this machine
-wing project list                           # the Host column
+wing project list                           # the Machine column
 wing project list --machine lab             # only what is on lab
 wing project list --local
-wing hosts                                  # which machines have projects, and how many
+wing machine list                           # every machine, and how many projects are on it
 </code></pre>
-<pre><code> Host   Projects  Languages
- local  9         nim, go, rust, zig
- lab    8         go, d, zig, v, rust, cpp, nim
- build  0
+<pre><code> Name   Username  Addresses           Tags  Projects  OS
+ lab    tester    10.0.0.1:22:local   gpu   8         Ubuntu 26.04
+ build  tester    10.0.0.2:22:local   None  0         unknown
+ local  -         -                   None  9         this machine
 </code></pre>
-<p>A machine with no projects still gets a row: "nothing here yet" and "no such machine" are different
+<p>There is no separate "hosts" registry — a machine is the host, and the project count is a column on
+it. This machine gets a <code>local</code> row even though it is not registered, because it holds projects too.
+A machine with none still gets a row: "nothing here yet" and "no such machine" are different
 answers, and only one of them means you have not run discovery.</p>
-<h3 id="names-are-qualified-by-host"><a class="header" href="#names-are-qualified-by-host">Names are qualified by host</a></h3>
+<h3 id="names-are-qualified-by-machine"><a class="header" href="#names-are-qualified-by-machine">Names are qualified by machine</a></h3>
 <p>The same name on two machines is two projects — a <code>deploy</code> on the build server and a <code>deploy</code> here
 are not the same thing, and on a laptop that talks to five servers there will be several such pairs.
 So a project is addressed as <code>name</code>, or as <code>host:name</code> when the bare name is ambiguous:</p>
@@ -863,8 +865,8 @@ set up and fails confusingly when it is not.</p>
 <pre><code class="language-sh">wing sync project lab:api tron --direct     # run rsync on lab instead
 </code></pre>
 <p><code>--direct</code> is for when it is set up: rsync runs on the source machine and connects onward itself.</p>
-<p><code>--register</code> records the copy, so <code>wing hosts</code> and <code>wing project list</code> show the project on both
-machines afterwards — which is the point of a host being part of a project's identity.</p>
+<p><code>--register</code> records the copy, so <code>wing machine list</code> and <code>wing project list</code> show the project on
+both machines afterwards — which is the point of the machine being part of a project's identity.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="tui"><a class="header" href="#tui">TUI</a></h1>
 <p>The TUI provides a terminal dashboard over the same command/storage logic used
 by the CLI.</p>
@@ -876,18 +878,17 @@ wing tui --command "project list"
 and overlays support scrolling for long output.</p>
 <h2 id="the-views"><a class="header" href="#the-views">The views</a></h2>
 <div class="table-wrapper"><table><thead><tr><th></th><th></th></tr></thead><tbody>
-<tr><td><strong>Hosts</strong></td><td>every machine with projects on it, how many, which languages, and what it is — the same answer <code>wing hosts</code> gives</td></tr>
-<tr><td><strong>Projects</strong></td><td>every project with the host it lives on, its path and language</td></tr>
-<tr><td><strong>Machines</strong></td><td>the registry: user, addresses, tags, and the OS from the last <code>machine facts</code></td></tr>
+<tr><td><strong>Projects</strong></td><td>every project with the machine it lives on, its path and language</td></tr>
+<tr><td><strong>Machines</strong></td><td>every machine: addresses, how many projects are on it, and what it is — plus a <code>local</code> row for this one</td></tr>
 <tr><td><strong>Templates</strong></td><td>what <code>wing template list</code> shows</td></tr>
 <tr><td><strong>Sync</strong></td><td>the named sync targets</td></tr>
 </tbody></table>
 </div>
-<p>Hosts comes first because it is the question a dashboard is opened to answer: where is everything.
-A machine with no projects still gets a row, since "nothing here yet" and "no such machine" are
-different answers.</p>
-<p>The OS column on Hosts and Machines comes from whatever <code>wing machine facts</code> last collected, so it
-is blank until that has run once and is never gathered while the dashboard is opening.</p>
+<p>There is no separate "hosts" view: a machine <em>is</em> the host, and how many projects are on it is a
+column rather than a screen. This machine gets a <code>local</code> row even though it is not in the registry —
+a list that answers "where is everything" with everything except here is not answering.</p>
+<p>The OS column comes from whatever <code>wing machine facts</code> last collected, so it is blank until that has
+run once, and is never gathered while the dashboard is opening.</p>
 <h2 id="keys"><a class="header" href="#keys">Keys</a></h2>
 <pre><code>↑/↓ move · ←/→ tabs · 1-9 jump to a tab · enter details
 s where · a add · d delete · / filter · : command · r reload · q quit
