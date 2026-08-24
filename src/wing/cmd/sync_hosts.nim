@@ -154,7 +154,7 @@ proc direct(source, destination: Endpoint; excludes: seq[string];
   argv.add(user & destination.host.ip & ":" & destination.path)
 
   echo paint("direct", "33") & "  " & source.label & " -> " &
-      destination.label &"  (run on " & source.machine.name & ")"
+      destination.label & "  (run on " & source.machine.name & ")"
   if dryRun:
     echo "  " & argv.join(" ")
     return true
