@@ -120,3 +120,28 @@ Silence is the good outcome: a repository with nothing to say gets no line, so w
 screen is the list of things to deal with. `--all` adds the clean ones, and the "no upstream" note —
 kept out of the default because wing generates projects with a repository and no remote, so it would
 be true of every new project forever.
+
+## Getting a project in
+
+A repository URL already says where a project belongs, so being asked for a path as well is being
+asked to repeat what you just typed.
+
+```sh
+wing project clone termworks/wing               # -> ~/code/github.com/termworks/wing
+wing project clone git@gitlab.com:group/app.git
+wing project clone owner/repo --machine lab     # clone it on the server instead
+wing project clone owner/repo --root /srv --branch develop
+wing project adopt ~/old/checkout               # move it into the layout and register it
+wing project adopt . --in-place                 # register where it already is
+```
+
+The layout is `<root>/<host>/<owner>/<name>`, and `WING_CODE_ROOT` sets the root (default
+`~/code`). The point of a layout is that two machines end up agreeing about where a project is
+without either being told — which is what makes a registry of projects across machines readable.
+
+Cloning registers the project, with its language read off what arrived. `--machine` does the whole
+thing on that machine instead: clone there, register it as living there.
+
+`adopt` reads the origin remote to work out where a checkout belongs, moves it, and registers it.
+A directory with no origin has nowhere to be filed, so it says so and `--in-place` is how you
+register it where it is.

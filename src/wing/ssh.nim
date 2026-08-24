@@ -109,24 +109,44 @@ proc sshReachable*(machine: Machine; host: Host; timeoutMs: int): tuple[
     result.ok = false
     result.detail = "ssh not available: " & e.msg
 
-proc writeSshConfig*(machine: Machine) =
+proc blockFor(machine: Machine; host: Host; alias: string): string =
+  result.add("Host " & alias & "\n")
+  result.add("  HostName " & host.ip & "\n")
+  result.add("  User " & machine.username & "\n")
+  result.add("  Port " & host.port & "\n")
+  if machine.key.len > 0:
+    result.add("  IdentityFile " & machine.key & "\n")
+    result.add("  IdentitiesOnly yes\n")
+  result.add("  StrictHostKeyChecking accept-new\n")
+  result.add("  ControlMaster auto\n")
+  result.add("  ControlPath " & controlSocketPath(machine, host) & "\n")
+  result.add("  ControlPersist 60\n")
+  if machine.proxyJump.len > 0:
+    result.add("  ProxyJump " & machine.proxyJump & "\n")
+  if machine.forwardAgent:
+    result.add("  ForwardAgent yes\n")
+  result.add("\n")
+
+proc sshConfigFor*(machine: Machine): string =
+  ## The ssh config for one machine, as text.
+  ##
+  ## The bare name comes first and points at the route wing would take, so `ssh lab`, `scp`,
+  ## `rsync` and `git clone lab:...` all work without wing in the way. The per-interface blocks
+  ## after it are for reaching one specific route on purpose.
+  var primary = Host()
   for host in machine.hosts:
-    echo "Host " & machine.name & "-" & host.iface
-    echo "  HostName " & host.ip
-    echo "  User " & machine.username
-    echo "  Port " & host.port
-    if machine.key.len > 0:
-      echo "  IdentityFile " & machine.key
-      echo "  IdentitiesOnly yes"
-    echo "  StrictHostKeyChecking accept-new"
-    echo "  ControlMaster auto"
-    echo "  ControlPath " & controlSocketPath(machine, host)
-    echo "  ControlPersist 60"
-    if machine.proxyJump.len > 0:
-      echo "  ProxyJump " & machine.proxyJump
-    if machine.forwardAgent:
-      echo "  ForwardAgent yes"
-    echo ""
+    if host.iface == "local" and host.ip.len > 0:
+      primary = host
+      break
+  if primary.ip.len == 0 and machine.hosts.len > 0:
+    primary = machine.hosts[0]
+  if primary.ip.len > 0:
+    result.add(blockFor(machine, primary, machine.name))
+  for host in machine.hosts:
+    result.add(blockFor(machine, host, machine.name & "-" & host.iface))
+
+proc writeSshConfig*(machine: Machine) =
+  stdout.write(sshConfigFor(machine))
 
 proc tcpReachable*(host: Host; timeoutMs: int): bool =
   var socket = newSocket()

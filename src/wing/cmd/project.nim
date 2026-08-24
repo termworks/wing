@@ -4,6 +4,7 @@ import std/[os, sequtils, strutils]
 
 import ../cliargs
 import ../projects/locate
+import ./project_clone
 import ./project_remote
 import ../discovery
 import ../jsonfmt
@@ -77,6 +78,10 @@ proc handleProject*(argsIn: seq[string]) =
     writeProjects(path, projects)
     echo "Project '" & name & "' added successfully to namespace '" &
         namespace & "'"
+  of "clone", "get":
+    handleClone(args)
+  of "adopt", "migrate":
+    handleAdopt(args)
   of "discover", "scan":
     let depthValue = popValue(args, ["--depth"], "3")
     let asJson = popFlag(args, ["--json"])

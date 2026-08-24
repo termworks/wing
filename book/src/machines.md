@@ -118,3 +118,42 @@ what scp and rsync already taught your fingers.
 
 `pull` takes exactly one machine: two would write to the same local path, and the second would
 silently win.
+
+## Port forwards you can name
+
+```sh
+wing machine tunnel add db lab --local 5433:localhost:5432
+wing machine tunnel add www lab --remote 8080:localhost:80
+wing machine tunnel add proxy lab --dynamic 1080
+wing machine tunnel start db
+wing machine tunnel list
+wing machine tunnel stop db
+```
+
+A forward is three numbers and a host, typed correctly, every time you want it. Naming one is the
+difference between remembering `-L 5433:localhost:5432` and typing `tunnel start db`.
+
+A tunnel gets its **own** ssh connection rather than the shared multiplexed one. With
+`ControlMaster` on, the forward is handed to the persistent master and the process wing started
+exits — leaving a working tunnel that `list` reports as down and `stop` cannot stop.
+
+`--foreground` runs it in this terminal instead of the background, for when you want to watch it or
+kill it with ctrl-c.
+
+## An ssh config for everything else
+
+```sh
+wing machine ssh-config            # print it
+wing machine ssh-config lab
+wing machine ssh-config --write    # install it
+```
+
+`--write` puts every machine into `~/.ssh/wing.config` and adds one `Include wing.config` line at
+the top of `~/.ssh/config`. After that, `ssh lab`, `scp file lab:/tmp`, `rsync`, and
+`git clone lab:/srv/repo.git` all work with no wing in the way.
+
+Each machine gets a block for its bare name, pointing at the route wing would take, and one per
+interface for reaching a specific route on purpose. The file is wing's — it is rewritten whole, so
+change the machine with `wing machine set` rather than editing it. The `Include` goes first because
+ssh takes the first value it sees for each option, so one added at the bottom loses to anything
+above it.
