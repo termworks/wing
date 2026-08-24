@@ -16,7 +16,7 @@ proc parseMachines*(path: string): seq[Machine] =
       continue
     if line == "[[machines]]":
       result.add(Machine(name: "", username: "", key: "", proxyJump: "",
-          forwardAgent: false, hosts: @[]))
+          forwardAgent: false, tags: @[], hosts: @[]))
       currentMachine = result.high
       currentHost = -1
     elif line == "[[machines.hosts]]":
@@ -42,6 +42,7 @@ proc parseMachines*(path: string): seq[Machine] =
           result[currentMachine].proxyJump = unquoteToml(value)
         of "forward_agent", "forwardAgent":
           result[currentMachine].forwardAgent = value.strip() == "true"
+        of "tags": result[currentMachine].tags = parseStringArray(value)
         else: discard
 
 proc writeMachines*(path: string; machines: seq[Machine]) =
@@ -59,6 +60,8 @@ proc writeMachines*(path: string; machines: seq[Machine]) =
         text.add("proxy_jump = " & tomlString(machine.proxyJump) & "\n")
       if machine.forwardAgent:
         text.add("forward_agent = true\n")
+      if machine.tags.len > 0:
+        text.add("tags = " & tomlArray(machine.tags) & "\n")
       for host in machine.hosts:
         text.add("\n[[machines.hosts]]\n")
         text.add("ip = " & tomlString(host.ip) & "\n")
