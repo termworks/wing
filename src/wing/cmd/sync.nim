@@ -3,6 +3,7 @@
 import std/[os, sequtils, strutils]
 
 import ../cliargs
+import ./sync_hosts
 import ../jsonfmt
 import ../rsync
 import ../ssh
@@ -47,6 +48,7 @@ Runs rsync over SSH, reusing the machine's ControlMaster socket (the same one
 wing machine connect / check --ssh use), so one connection is shared.
 
 Commands:
+  project SOURCE DEST [--to PATH] [--delete] [--dry-run] [--register]
   add NAME --project P --machine M --remote PATH [options]
   list [--raw]
   info NAME [--json]
@@ -63,6 +65,14 @@ add options:
   --direction push|pull default push
   --delete              mirror: remove files on destination not at source
   --exclude PATH        repeatable; passed to rsync as --exclude
+
+project options:
+  SOURCE                registered project: NAME or HOST:NAME
+  DEST                  a machine (tron), or a project on one (tron:api)
+  --to PATH             destination path, when it differs from the source's
+  --direct              run rsync on the source machine instead of relaying
+                        here; needs the source to be able to ssh to the dest
+  --register            record the copy in the registry as a project on DEST
 
 run options:
   --dry-run             print the rsync command without transferring
@@ -81,6 +91,8 @@ proc handleSync*(argsIn: seq[string]) =
   var syncs = parseSyncs(path)
 
   case command
+  of "project", "between", "p":
+    handleSyncProject(args)
   of "add", "a", "new", "create":
     let project = popValue(args, ["--project"])
     let machine = popValue(args, ["--machine"])

@@ -59,3 +59,39 @@ wing sync remove NAME
 One endpoint is always the local machine. Sync targets resolve the project and
 machine from the existing registries, so adding `--proxy-jump`/`--forward-agent`
 to the machine automatically applies to its sync targets too.
+
+## Syncing a project between hosts
+
+The commands above are a registry of named targets you set up once and run again. This is the other
+half: an ad-hoc copy between two machines, named the way everything else names projects.
+
+```sh
+wing sync project api tron                  # this project, onto that machine
+wing sync project lab:api local             # bring it back
+wing sync project lab:api tron:api          # between two machines
+wing sync project api tron --to /srv/api    # a different path on the far side
+wing sync project api tron --delete --exclude target --exclude .direnv
+wing sync project api tron --dry-run        # print the plan, touch nothing
+wing sync project api tron --register       # …and record it as a project on tron
+```
+
+`SOURCE` is a registered project (`name`, or `host:name` when the bare name is ambiguous).
+`DEST` is a machine, or a project on one. A machine on its own means *the same project, over there*,
+which saves registering it before the first copy.
+
+**Where it lands**, in order: `--to` if given; else the path the destination's own registry entry
+has; else the source's path, which keeps a project in the same place on every machine.
+
+**When neither end is this machine**, the bytes are relayed through here — down, then up. That is
+twice the transfer and still the right default: rsync cannot talk between two remote hosts on its
+own, and the alternative needs the source to be able to ssh to the destination, which usually is not
+set up and fails confusingly when it is not.
+
+```sh
+wing sync project lab:api tron --direct     # run rsync on lab instead
+```
+
+`--direct` is for when it is set up: rsync runs on the source machine and connects onward itself.
+
+`--register` records the copy, so `wing hosts` and `wing project list` show the project on both
+machines afterwards — which is the point of a host being part of a project's identity.
