@@ -52,7 +52,7 @@ jobs:
         run: |
           cachix push termworks < "$RUNNER_TEMP/wing-store-paths"
           path=$(cat "$RUNNER_TEMP/wing-store-paths")
-          cachix pin termworks "wing-latest-$SYSTEM" "$path" --keep-revisions 1
+          cachix pin termworks "wing-$SYSTEM" "$path" --keep-revisions 5
 
   verify-download:
     needs: publish
