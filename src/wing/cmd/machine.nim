@@ -5,8 +5,12 @@ import std/[os, osproc, sequtils, strutils]
 import ../cliargs
 import ../jsonfmt
 import ./machine_remote
+import ./tunnel
 import ../ssh
+import ../machines/facts
+import ../projects/locate
 import ../store/machines
+import ../store/projects
 import ../types
 import ../util
 
@@ -27,7 +31,8 @@ Commands:
   push SOURCE... NAME:DEST [--all] [--tag TAG] [--dry-run]
   pull NAME:SOURCE DEST [--dry-run]
   tag NAME TAG...  |  untag NAME TAG...
-  ssh-config [NAME]
+  tunnel add|list|start|stop|remove …
+  ssh-config [NAME] [--write]
   check NAME [--ssh] [--timeout MS]
   check --all [--ssh] [--timeout MS]
   pick
@@ -106,15 +111,35 @@ proc handleMachine*(argsIn: seq[string]) =
           echo machine.name & "\t" & machine.username & "\t" & host.ip & "\t" &
               host.port & "\t" & host.iface
     else:
-      echo table(
-        @["Name", "Username", "Hosts", "Tags"],
-        machines.mapIt(@[
-          it.name,
-          it.username,
-          it.hosts.mapIt(it.ip & ":" & it.port & ":" & it.iface).join(", "),
-          noneIfEmpty(it.tags.join(", "))
+      # How many projects are on each machine, and what it is. Both are things you look up about a
+      # machine, so they live where the machines are listed rather than in a command of their own.
+      let projects = parseProjects(ensureProjectsFile())
+      let known = parseFacts(factsFile())
+      var rows: seq[seq[string]]
+      for machine in machines:
+        var count = 0
+        for project in projects:
+          if machineLabel(project) == machine.name:
+            count.inc
+        let idx = findFacts(known, machine.name)
+        rows.add(@[
+          machine.name,
+          machine.username,
+          machine.hosts.mapIt(it.ip & ":" & it.port & ":" & it.iface).join(
+              ", "),
+          noneIfEmpty(machine.tags.join(", ")),
+          $count,
+          if idx >= 0: unknownIfEmpty(known[idx].os) else: "unknown"
         ])
-      )
+      # This machine holds projects too, and it is not in the registry -- leaving it out would make
+      # a listing that answers "where is everything" with everything except here.
+      var localCount = 0
+      for project in projects:
+        if project.machine.len == 0:
+          localCount.inc
+      if localCount > 0:
+        rows.add(@["local", "-", "-", "None", $localCount, "this machine"])
+      echo table(@["Name", "Username", "Addresses", "Tags", "Projects", "OS"], rows)
   of "info", "i", "show":
     rejectUnknownOptions(args)
     requireArgs(args, 1, "wing machine info NAME")
@@ -285,10 +310,36 @@ proc handleMachine*(argsIn: seq[string]) =
     writeMachines(path, machines)
     echo name & ": " & (if machines[found].tags.len >
         0: machines[found].tags.join(", ") else: "no tags")
+  of "tunnel", "tunnels", "forward":
+    handleTunnel(args)
   of "ssh-config", "config":
+    let write = popFlag(args, ["-w", "--write"])
     rejectUnknownOptions(args)
     if args.len > 1:
-      die("Usage: wing machine ssh-config [NAME]", 2)
+      die("Usage: wing machine ssh-config [NAME] [--write]", 2)
+    if write:
+      # Written where ssh already looks, as its own file that wing owns entirely, and pulled in by
+      # one Include line. Editing the user's config in place would mean parsing and rewriting
+      # something they wrote, and getting that wrong costs them every connection they have.
+      var text = "# Written by wing — `wing machine ssh-config --write` regenerates it.\n" &
+          "# Do not edit: change the machine with `wing machine set` instead.\n\n"
+      for machine in machines:
+        if args.len == 0 or machine.name == args[0]:
+          text.add(sshConfigFor(machine))
+      let sshDir = getHomeDir() / ".ssh"
+      createDir(sshDir)
+      let target = sshDir / "wing.config"
+      writeFile(target, text)
+      let mainConfig = sshDir / "config"
+      let includeLine = "Include wing.config"
+      let existing = if fileExists(mainConfig): readFile(mainConfig) else: ""
+      if not existing.contains(includeLine):
+        # First line: ssh takes the first value it sees for each option, so an Include added at the
+        # bottom loses to anything above it that already matched.
+        writeFile(mainConfig, includeLine & "\n\n" & existing)
+        echo "Added '" & includeLine & "' to " & mainConfig
+      echo "Wrote " & target & " (" & $machines.len & " machines)"
+      return
     if args.len == 0:
       for machine in machines:
         writeSshConfig(machine)

@@ -2,10 +2,13 @@
 
 import std/[sequtils, strutils]
 
+import ./machines/facts
+import ./projects/locate
 import ./storage
 import ./store/machines
 import ./store/projects
 import ./store/syncs
+import ./builtins/install
 import ./store/templates
 import ./types
 import ./util
@@ -17,16 +20,44 @@ proc loadDashboardData*(): DashboardData =
 
   let projects = parseProjects(projectPath)
   let machines = parseMachines(machinePath)
-  let templates = parseTemplates(templatePath)
+  # What can actually be applied, which is the registry plus whatever the tree declares.
+  #
+  # `cast(gcsafe)` because the declared templates come from a Lua state the process keeps open, held
+  # in module globals -- so reading them is not GC-safe by Nim's rules, and the TUI's `update` is an
+  # override that must be. wing is single-threaded and that state is per-process, so the thing the
+  # rule protects against cannot happen here.
+  var templates: seq[Template]
+  {.cast(gcsafe).}:
+    templates = allTemplates(parseTemplates(templatePath))
+
+  # What each machine answered when facts were last collected, if they ever were. A dashboard that
+  # can say "aarch64, 8 cpus" without asking is worth more than one that only repeats what was typed
+  # into it.
+  let known = parseFacts(factsFile())
 
   var machineRows: seq[seq[string]] = @[]
   for machine in machines:
+    var count = 0
+    for project in projects:
+      if machineLabel(project) == machine.name:
+        count.inc
+    let idx = findFacts(known, machine.name)
     machineRows.add(@[
       machine.name,
       machine.username,
       machine.hosts.mapIt(it.ip & ":" & it.port & ":" & it.iface).join(", "),
-      noneIfEmpty(machine.key)
+      $count,
+      if idx >= 0: unknownIfEmpty(known[idx].os) else: "unknown"
     ])
+
+  # This machine is not in the registry but holds projects, so it gets a row too: a list that
+  # answers "where is everything" with everything except here is not answering.
+  var localCount = 0
+  for project in projects:
+    if project.machine.len == 0:
+      localCount.inc
+  if localCount > 0:
+    machineRows.add(@["local", "-", "-", $localCount, "this machine"])
 
   result = DashboardData(
     dataDir: dataRoot(),
@@ -34,10 +65,10 @@ proc loadDashboardData*(): DashboardData =
       DashboardSection(
         title: "Projects",
         empty: "No projects yet. Add one with: wing project add NAME --path PATH",
-        headers: @["Name", "Namespace", "Path", "Language"],
+        headers: @["Machine", "Name", "Path", "Language"],
         rows: projects.mapIt(@[
+          machineLabel(it),
           it.name,
-          it.namespace,
           it.path,
           noneIfEmpty(it.language)
     ])
@@ -45,7 +76,7 @@ proc loadDashboardData*(): DashboardData =
       DashboardSection(
         title: "Machines",
         empty: "No machines yet. Add one with: wing machine add NAME IP[:PORT][:IFACE]",
-        headers: @["Name", "User", "Hosts", "Key"],
+        headers: @["Name", "User", "Addresses", "Projects", "OS"],
         rows: machineRows
   ),
   DashboardSection(

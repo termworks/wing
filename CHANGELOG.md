@@ -1,5 +1,30 @@
 # Changelog
 
+## [0.7.4] - 2026-10-04
+
+### <!-- 0 -->⛰️  Features
+
+- Clone, adopt, status, tunnels and ssh config
+- Check, diff and update against the template
+- Hosts view and host-aware projects
+- Copy a project between hosts
+- Host-namespaced projects and an ssh client
+
+### <!-- 1 -->🐛 Bug Fixes
+
+- Show and apply what the tree declares
+- Restore operator mangled by nimpretty
+- Restore operator mangled by nimpretty
+
+### <!-- 2 -->🚜 Refactor
+
+- Fold hosts into machines
+
+### <!-- 7 -->⚙️ Miscellaneous Tasks
+
+- Cache wing tagged releases
+- Install the config with the binary
+
 ## [0.7.3] - 2026-08-24
 
 ### <!-- 0 -->⛰️  Features

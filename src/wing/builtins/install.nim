@@ -176,3 +176,47 @@ proc templateSourceForFlavour*(tmpl: Template; requested: string;
     return
 
   result.path = materializeBuiltinTemplate(builtin, result.flavour)
+
+proc asTemplateRecord*(spec: TemplateSpec; path: string): Template =
+  ## A declared template in the shape the registry and every listing already speak.
+  Template(
+    name: spec.name,
+    description: spec.description,
+    path: path,
+    language: spec.language,
+    framework: spec.framework,
+    tags: builtinTemplateTags(spec)
+  )
+
+proc allTemplates*(registry: seq[Template]): seq[Template] =
+  ## Every template you can actually use: the registry, plus everything the template tree declares
+  ## and the registry has not heard of.
+  ##
+  ## The registry is a snapshot taken when `wing init` or `template builtins install` last ran, and
+  ## nothing re-takes it -- so a template added to the tree afterwards was invisible *and*
+  ## unusable, with `apply` answering "not found" for a template `template builtins list` was
+  ## happily printing. The tree is what declares templates; the registry adds to it.
+  ##
+  ## Nothing is materialised here: listing every template should not copy every template.
+  result = registry
+  for spec in builtinSpecs():
+    var known = false
+    for tmpl in registry:
+      if tmpl.name == spec.name:
+        known = true
+        break
+    if not known:
+      result.add(asTemplateRecord(spec, builtinTemplatePath(spec)))
+
+proc resolveTemplate*(registry: seq[Template]; name: string): tuple[found: bool;
+    tmpl: Template] =
+  ## The registry first, so a template someone registered by hand still wins, then the tree.
+  for tmpl in registry:
+    if tmpl.name == name:
+      return (true, tmpl)
+  for spec in builtinSpecs():
+    if spec.name == name:
+      # Materialised now rather than at listing time: this is the path something is about to be
+      # generated from, so it has to be the assembled tree rather than the template directory.
+      return (true, asTemplateRecord(spec, materializeBuiltinTemplate(spec)))
+  (false, Template())

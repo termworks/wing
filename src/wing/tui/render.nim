@@ -50,13 +50,17 @@ proc rowParts*(section: DashboardSection; row: seq[string]): tuple[
   result.name = if row.len > 0: row[0] else: ""
   case title
   of "Projects":
+    # [machine, name, path, language] -- the project is the name, the machine is where it is.
+    result.name = if row.len > 1: row[1] else: ""
     result.right = if row.len > 3: dash(row[3]) else: "—"
-    result.meta = "namespace " & (if row.len > 1: dash(row[1]) else: "—")
+    result.meta = "on " & (if row.len > 0: dash(row[0]) else: "—")
     result.desc = if row.len > 2: dash(row[2]) else: "—"
   of "Machines":
-    result.right = if row.len > 1: dash(row[1]) else: "—"
+    # [name, user, addresses, projects, os]
+    result.right = (if row.len > 3: row[3] else: "0") & " projects"
     result.meta = if row.len > 2: dash(row[2]) else: "—"
-    result.desc = "key " & (if row.len > 3: dash(row[3]) else: "—")
+    result.desc = (if row.len > 4: dash(row[4]) else: "—") & "  ·  " &
+        (if row.len > 1: dash(row[1]) else: "—")
   of "Templates":
     result.right = if row.len > 3: dash(row[3]) else: "—"
     result.meta = if row.len > 1: dash(row[1]) else: "—"
@@ -113,7 +117,7 @@ proc statusLine*(state: ViewState; width: int): string =
 
 proc helpLine*(width: int): string =
   newStyle().foreground(cMuted).render(truncate(
-      "↑/↓ move · ←/→ tabs · enter details · a add · d delete · / filter · : command · r reload · q quit",
+      "↑/↓ move · ←/→ tabs · enter details · s where · a add · d delete · / filter · : command · q quit",
       width, "…"))
 
 proc dashboardBody*(m: WingApp): string =

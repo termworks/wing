@@ -5,6 +5,8 @@ import std/[os, sequtils, strutils]
 import ../apply
 import ../builtins/registry
 import ./plugin
+import ./template_update
+import ../templates/provenance
 import ../builtins/flavours
 import ../builtins/install
 import ../repo
@@ -105,6 +107,8 @@ proc handleTemplate*(argsIn: seq[string]) =
     let raw = popFlag(args, ["-r", "--raw"])
     let asJson = popFlag(args, ["--json"])
     rejectUnknownOptions(args)
+    # Everything usable, not only what the registry was last told about.
+    let templates = allTemplates(templates)
     if asJson:
       printJsonArray(templates, templateJson)
     elif raw:
@@ -126,7 +130,7 @@ proc handleTemplate*(argsIn: seq[string]) =
     rejectUnknownOptions(args)
     requireArgs(args, 1, "wing template info NAME")
     let name = args[0]
-    for tmpl in templates:
+    for tmpl in allTemplates(templates):
       if tmpl.name == name:
         echo "Template: " & tmpl.name
         echo "Description: " & tmpl.description
@@ -143,7 +147,7 @@ proc handleTemplate*(argsIn: seq[string]) =
         echo "Updated: " & displayStamp(tmpl.updatedAt)
         return
     die("Template '" & name & "' not found")
-  of "set", "update", "edit":
+  of "set", "edit":
     let description = popValue(args, ["-d", "--description", "--desc"])
     let templatePath = popValue(args, ["-p", "--path"])
     let language = popValue(args, ["-l", "--language"])
@@ -226,15 +230,10 @@ proc handleTemplate*(argsIn: seq[string]) =
       die("--force and --skip-existing cannot be used together", 2)
     let templateName = args[0]
     let targetPath = args[1]
-    var found: Template
-    var hasFound = false
-    for tmpl in templates:
-      if tmpl.name == templateName:
-        found = tmpl
-        hasFound = true
-        break
-    if not hasFound:
+    let resolved = resolveTemplate(templates, templateName)
+    if not resolved.found:
       die("Template '" & templateName & "' not found")
+    let found = resolved.tmpl
 
     let source = templateSourceForFlavour(found, flavour, hasFlavour)
     let renderedName = effectiveProjectName(projectName, targetPath)
@@ -279,6 +278,13 @@ proc handleTemplate*(argsIn: seq[string]) =
     let skippedReplacements = applyTemplate(source.path, targetPath,
         renderedName, force, skipExisting, allowSymlinks)
     printList("Skipped placeholder replacements", skippedReplacements)
+
+    # What generated this, and what each file looked like when it did. Written before the git step
+    # so it lands in the first commit: a record that is not committed does not travel with the
+    # project, and travelling with it is the whole point.
+    writeProvenance(targetPath, recordOf(templateName, source.flavour,
+        renderedName, nowStamp(), targetPath))
+
     if not noGit:
       let repo = setupRepository(targetPath)
       let said = describe(repo)
@@ -290,6 +296,12 @@ proc handleTemplate*(argsIn: seq[string]) =
       else: ""
     echo "Template '" & templateName & "'" & flavourSuffix &
         " successfully applied to '" & targetPath & "'"
+  of "check", "outdated":
+    handleTemplateCheck(args)
+  of "diff":
+    handleTemplateDiff(args)
+  of "update", "sync":
+    handleTemplateUpdate(args)
   of "install":
     handleInstall(args)
   of "installed":

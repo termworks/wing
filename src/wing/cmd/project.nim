@@ -3,6 +3,9 @@
 import std/[os, sequtils, strutils]
 
 import ../cliargs
+import ../projects/locate
+import ./project_clone
+import ./project_remote
 import ../discovery
 import ../jsonfmt
 import ../store/projects
@@ -46,15 +49,23 @@ proc handleProject*(argsIn: seq[string]) =
     let language = popValue(args, ["-l", "--language"])
     let framework = popValue(args, ["-f", "--framework"])
     let tags = popValues(args, ["--tags"])
+    let onMachine = popValue(args, ["-m", "--machine"])
     rejectUnknownOptions(args)
     requireArgs(args, 1, "wing project add NAME [options]")
     let name = args[0]
-    if projects.anyIt(it.name == name and it.namespace == namespace):
-      die("Project '" & name & "' already exists in namespace '" & namespace & "'")
+    # The machine is part of what makes a project distinct: a `deploy` on the build server and a
+    # `deploy` here are two projects, and a laptop that talks to five servers will have several
+    # such pairs. Only the same name on the same machine is a duplicate.
+    if projects.anyIt(it.name == name and it.namespace == namespace and
+        it.machine == onMachine):
+      die("Project '" & name & "' already exists on " &
+          (if onMachine.len > 0: onMachine else: "this machine") &
+          " in namespace '" & namespace & "'")
     let stamp = nowStamp()
     projects.add(Project(
       name: name,
       path: projectPath,
+      machine: onMachine,
       namespace: namespace,
       templateName: templateName,
       description: description,
@@ -67,11 +78,20 @@ proc handleProject*(argsIn: seq[string]) =
     writeProjects(path, projects)
     echo "Project '" & name & "' added successfully to namespace '" &
         namespace & "'"
+  of "clone", "get":
+    handleClone(args)
+  of "adopt", "migrate":
+    handleAdopt(args)
   of "discover", "scan":
     let depthValue = popValue(args, ["--depth"], "3")
     let asJson = popFlag(args, ["--json"])
+    let machineName = popValue(args, ["-m", "--machine"])
+    let machineTags = popValues(args, ["--tag", "--tags"])
+    let onAll = popFlag(args, ["--all-machines"])
+    let register = popFlag(args, ["--register", "--save"])
     rejectUnknownOptions(args)
-    requireArgs(args, 1, "wing project discover PATH [--depth N] [--json]")
+    requireArgs(args, 1,
+        "wing project discover PATH [--depth N] [--machine NAME] [--register]")
     var depth = 3
     try:
       depth = parseInt(depthValue)
@@ -79,6 +99,12 @@ proc handleProject*(argsIn: seq[string]) =
       die("Invalid discovery depth: " & depthValue, 2)
     if depth < 0:
       die("Invalid discovery depth: " & depthValue, 2)
+    if machineName.len > 0 or onAll or machineTags.len > 0:
+      discoverOnMachines(args[0], depth, machineName, machineTags, onAll, register)
+      return
+    if register:
+      registerLocalDiscovered(args[0], depth)
+      return
     printDiscovered(discoverProjects(args[0], depth), asJson)
   of "import":
     let dryRun = popFlag(args, ["--dry-run"])
@@ -125,37 +151,47 @@ proc handleProject*(argsIn: seq[string]) =
   of "list", "l", "ls":
     let raw = popFlag(args, ["-r", "--raw"])
     let asJson = popFlag(args, ["--json"])
+    let onMachine = popValue(args, ["-m", "--machine"])
+    let localOnly = popFlag(args, ["--local"])
     rejectUnknownOptions(args)
-    let filtered = projects.filterIt(it.namespace == namespace)
+    var filtered = projects.filterIt(it.namespace == namespace)
+    if onMachine.len > 0:
+      filtered = filtered.filterIt(it.machine == onMachine)
+    elif localOnly:
+      filtered = filtered.filterIt(it.machine.len == 0)
     if asJson:
       printJsonArray(filtered, projectJson)
     elif raw:
       for project in filtered:
-        echo project.name & "\t" & project.namespace & "\t" & project.path &
-            "\t" & unknownIfEmpty(project.language)
+        echo machineLabel(project) & "\t" & project.name & "\t" &
+            project.namespace & "\t" & project.path & "\t" &
+            unknownIfEmpty(project.language)
     else:
       echo table(
-        @["Name", "Path", "Namespace", "Template", "Language", "Framework",
-            "Tags", "Created"],
+        @["Machine", "Name", "Path", "Language", "Tags", "Created"],
         filtered.mapIt(@[
+          machineLabel(it),
           it.name,
           it.path,
-          it.namespace,
-          noneIfEmpty(it.templateName),
           noneIfEmpty(it.language),
-          noneIfEmpty(it.framework),
           if it.tags.len == 0: "None" else: it.tags.join(", "),
           dateOnly(it.createdAt)
         ])
       )
   of "info", "i", "show":
+    let onMachine = popValue(args, ["-m", "--machine"])
     rejectUnknownOptions(args)
-    requireArgs(args, 1, "wing project info NAME")
-    let name = args[0]
+    requireArgs(args, 1, "wing project info NAME [--machine HOST]")
+    # A name can mean a project on more than one machine, so `HOST:NAME` and `--machine` both
+    # narrow it; without either, the first match still answers, as it always did.
+    let (fromRef, name) = splitQualified(args[0])
+    let wanted = if onMachine.len > 0: onMachine else: fromRef
     for project in projects:
-      if project.name == name and project.namespace == namespace:
+      if project.name == name and project.namespace == namespace and
+          (wanted.len == 0 or machineLabel(project) == wanted):
         echo "Project: " & project.name
         echo "Path: " & project.path
+        echo "Host: " & machineLabel(project)
         echo "Namespace: " & project.namespace
         echo "Template: " & noneIfEmpty(project.templateName)
         echo "Description: " & noneIfEmpty(project.description)
@@ -166,15 +202,31 @@ proc handleProject*(argsIn: seq[string]) =
         echo "Created: " & displayStamp(project.createdAt)
         echo "Updated: " & displayStamp(project.updatedAt)
         return
-    die("Project '" & name & "' not found in namespace '" & namespace & "'")
+    die("Project '" & args[0] & "' not found in namespace '" & namespace & "'")
   of "remove", "rm", "delete", "del":
+    let onMachine = popValue(args, ["-m", "--machine"])
     rejectUnknownOptions(args)
-    requireArgs(args, 1, "wing project remove NAME")
-    let name = args[0]
+    requireArgs(args, 1, "wing project remove NAME [--machine HOST]")
+    let (fromRef, name) = splitQualified(args[0])
+    let wanted = if onMachine.len > 0: onMachine else: fromRef
+    # Unqualified, a name can now mean a project on several machines -- and removing all of them
+    # because one was asked for is not a reading anybody intended. Naming one is the way out.
+    if wanted.len == 0:
+      var hosts: seq[string]
+      for project in projects:
+        if project.name == name and project.namespace == namespace and
+            machineLabel(project) notin hosts:
+          hosts.add(machineLabel(project))
+      if hosts.len > 1:
+        die("'" & name & "' is on " & $hosts.len & " machines: " &
+            hosts.mapIt(it & ":" & name).join(", ") &
+            " — name one of those instead", 2)
     let before = projects.len
-    projects = projects.filterIt(not (it.name == name and it.namespace == namespace))
+    projects = projects.filterIt(not (it.name == name and
+        it.namespace == namespace and
+        (wanted.len == 0 or machineLabel(it) == wanted)))
     if projects.len == before:
-      die("Project '" & name & "' not found in namespace '" & namespace & "'")
+      die("Project '" & args[0] & "' not found in namespace '" & namespace & "'")
     writeProjects(path, projects)
     echo "Project '" & name & "' removed from namespace '" & namespace & "'"
   of "set", "update", "edit":
@@ -182,10 +234,11 @@ proc handleProject*(argsIn: seq[string]) =
     let language = popValue(args, ["-l", "--language"])
     let framework = popValue(args, ["-f", "--framework"])
     let description = popValue(args, ["-d", "--description"])
+    let onMachine = popValue(args, ["-m", "--machine"])
     rejectUnknownOptions(args)
     requireArgs(args, 1, "wing project set NAME [options]")
     if projectPath.len == 0 and language.len == 0 and framework.len == 0 and
-        description.len == 0:
+        description.len == 0 and onMachine.len == 0:
       die("No project fields were provided", 2)
     let name = args[0]
     for i in 0 .. projects.high:
@@ -198,6 +251,10 @@ proc handleProject*(argsIn: seq[string]) =
           projects[i].framework = framework
         if description.len > 0:
           projects[i].description = description
+        # `--machine local` moves a project back to this machine, which is stored as no machine at
+        # all -- otherwise there would be no way to undo a `--machine lab` except by hand.
+        if onMachine.len > 0:
+          projects[i].machine = if onMachine == "local": "" else: onMachine
         projects[i].updatedAt = nowStamp()
         writeProjects(path, projects)
         echo "Project '" & name & "' updated in namespace '" & namespace & "'"

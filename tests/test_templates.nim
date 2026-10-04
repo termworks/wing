@@ -611,3 +611,37 @@ for recipes in walkDirRec("config" / "templates"):
   doAssert text.contains("name = \"configs\""), recipes & " should have a configs recipe"
   doAssert text.contains("rev-parse"),
       recipes & "'s configs recipe should find the project root rather than assume the cwd"
+
+# --- a template the registry never heard of is still usable -------------------
+# The registry is a snapshot taken when `init` or `template builtins install` last ran, and nothing
+# re-takes it. A template added to the tree afterwards used to be invisible to `list` and the TUI,
+# and `apply` answered "not found" for a template `template builtins list` was happily printing.
+let staleRoot = "/tmp/wing-stale-registry"
+resetDir(staleRoot)
+createDir(staleRoot / "latecomer")
+writeFile(staleRoot / "latecomer" / "template.lua", """
+local wing = require("wing")
+wing.template("latecomer", { description = "added after the registry was seeded",
+    language = "text" })
+""")
+writeFile(staleRoot / "latecomer" / "file.txt", "{{project_name}} arrived late\n")
+
+let stalePrefix = freshEnv("stale") & "WING_TEMPLATE_DIR=" &
+    quoteShell(staleRoot) & " "
+let staleWing = wing(stalePrefix)
+discard checked(staleWing & "init")
+# Deliberately *not* running `template builtins install` here: that is the step nobody remembers,
+# and the point is that forgetting it no longer hides a template.
+
+let staleList = checked(staleWing & "template list --raw")
+doAssert staleList.contains("latecomer"), staleList
+doAssert checked(staleWing & "template info latecomer").contains("added after"),
+    "info should find a template the registry has not got"
+
+let lateTarget = "/tmp/wing-stale-applied"
+removeDir(lateTarget)
+discard checked(staleWing & "template apply latecomer " & quoteShell(
+    lateTarget) &
+    " --name late_demo --no-git")
+doAssert readFile(lateTarget / "file.txt").contains("late_demo arrived late"),
+    "a declared template has to be applicable without being registered first"

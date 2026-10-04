@@ -62,6 +62,30 @@ After `make build`, the binary is available at:
 ./wing --help
 ```
 
+## Nix package and binary cache
+
+Linux packages are available for x86-64 and ARM64:
+
+```sh
+nix build --accept-flake-config github:termworks/wing/v0.7.4
+nix run --accept-flake-config github:termworks/wing/v0.7.4 -- --help
+```
+
+The flake declares the public `termworks` Cachix cache and signing key. To
+configure the cache globally instead, run `cachix use termworks` once.
+Only `v*` tags publish binaries; ordinary branch pushes do not.
+
+Only the latest release per package and architecture is protected from cache
+cleanup. Pins use `*-latest-*` with `--keep-revisions 1`; older releases may
+need rebuilding after garbage collection.
+
+From another flake, set `inputs.wing.url = "github:termworks/wing/v0.7.4"` and
+use `inputs.wing.packages.${system}.default`. Configure the cache in the
+consuming flake or globally as above. The package includes the template tree
+under `share/wing/templates`, discovered automatically by the binary.
+
+Local package gates: `make nix-build` and `make nix-check`.
+
 ## Usage
 
 ```sh

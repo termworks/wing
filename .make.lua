@@ -253,6 +253,18 @@ make.recipe{
 
 make.alias("v", "verify")
 
+make.recipe{
+  name = "nix-build",
+  desc = "build the Nix package",
+  run = function() sh.nix("build", "--accept-flake-config", ".#wing") end,
+}
+
+make.recipe{
+  name = "nix-check",
+  desc = "validate the flake and package install checks",
+  run = function() sh.nix("flake", "check", "--accept-flake-config", "--print-build-logs") end,
+}
+
 ---------------------------------------------------------------------------- shipping
 
 make.recipe{
@@ -314,13 +326,17 @@ make.recipe{
 
 make.recipe{
   name = "install",
-  desc = "put the binary in $PREFIX/bin",
+  desc = "put the binary in $PREFIX/bin, and config/ where it reads it",
   deps = { "build" },
   run = function()
     local dest = (os.getenv("DESTDIR") or "") .. PREFIX .. "/bin"
     sh.install("-d", dest)
     sh.install("-m", "0755", BIN, dest .. "/" .. NAME)
     print(oslo.ui.style("✓ ", { fg = "green" }) .. dest .. "/" .. NAME)
+    -- Last, and part of the install rather than a step to remember: a binary newer than
+    -- the config it reads is how a setting that shipped together with it silently does
+    -- nothing. Run alone, `configs` still installs only the config.
+    make.run("configs")
   end,
 }
 
