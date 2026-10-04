@@ -3,7 +3,7 @@ package main
 import "core:fmt"
 import "core:os"
 
-VERSION :: "0.1.0"
+VERSION :: "0.7.4"
 
 greeting :: proc() -> string {
 	return "hello from {{kebab_name}}"
