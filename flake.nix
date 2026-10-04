@@ -1,5 +1,10 @@
 {
-  description = "robolibs crate development shell";
+  description = "wing development workflow and project management CLI";
+
+  nixConfig = {
+    extra-substituters = [ "https://termworks.cachix.org" ];
+    extra-trusted-public-keys = [ "termworks.cachix.org-1:Ty7sSVALfD5ajbcWBIdaNHcaEx3fEmVrOo+rSzy0mvE=" ];
+  };
 
   inputs = {
     # Pinned to a rev that still accepts the `kernel` arg in
@@ -92,6 +97,62 @@
           pkgs.pkg-config
         ];
 
+        bobabrew = pkgs.fetchurl {
+          url = "https://github.com/bresilla/bobabrew/archive/b88ebcfe82f5bdfd03044b318ff013f0526e23a0.tar.gz";
+          hash = "sha256-X/kfDh1FowuBhkPPqzSJ7IhA8IvDsTqroAU4YICI5iM=";
+        };
+
+        wing = pkgs.stdenv.mkDerivation (finalAttrs: {
+          pname = "wing";
+          version = builtins.head (builtins.match ".*version[[:space:]]*=[[:space:]]*\"([^\"]+)\".*" (builtins.readFile ./wing.nimble));
+          src = pkgs.lib.cleanSource ./.;
+          nativeBuildInputs = [ pkgs.nim ];
+          WING_LUA = pkgs.pkgsMusl.lua5_4;
+          buildPhase = ''
+            runHook preBuild
+            export HOME=$TMPDIR
+            mkdir -p "$TMPDIR/bobabrew"
+            tar -xf ${bobabrew} -C "$TMPDIR/bobabrew" --strip-components=1
+            nim c -d:release --noNimblePath --path:"$TMPDIR/bobabrew/src" \
+              --gcc.exe:${pkgs.musl.dev}/bin/musl-gcc \
+              --gcc.linkerexe:${pkgs.musl.dev}/bin/musl-gcc \
+              --passL:-static --out:wing src/wing.nim
+            runHook postBuild
+          '';
+          installPhase = ''
+            runHook preInstall
+            install -Dm755 wing $out/bin/wing
+            mkdir -p $out/share/wing
+            cp -r config/templates $out/share/wing/
+            runHook postInstall
+          '';
+          doInstallCheck = true;
+          installCheckPhase = ''
+            runHook preInstallCheck
+            export HOME=$TMPDIR/wing-home
+            export XDG_CONFIG_HOME=$HOME/config
+            export XDG_DATA_HOME=$HOME/data
+            mkdir -p "$HOME"
+            cd "$HOME"
+            test "$($out/bin/wing --version)" = '${finalAttrs.version}'
+            $out/bin/wing --help
+            $out/bin/wing tui --snapshot | grep -F 'Projects:'
+            $out/bin/wing template builtins list --raw | grep -F nim
+            $out/bin/wing template apply nim "$HOME/generated" --name cache_smoke --no-git
+            test -f "$HOME/generated/cache_smoke.nimble"
+            if readelf -l $out/bin/wing | grep -q INTERP; then exit 1; fi
+            if readelf -d $out/bin/wing | grep -q NEEDED; then exit 1; fi
+            runHook postInstallCheck
+          '';
+          meta = {
+            description = "Development workflow and project management CLI";
+            homepage = "https://github.com/termworks/wing";
+            license = pkgs.lib.licenses.mit;
+            mainProgram = "wing";
+            platforms = pkgs.lib.platforms.linux;
+          };
+        });
+
         guiLibs = with pkgs; [
           alsa-lib
           udev
@@ -134,6 +195,11 @@
           WGPU_VALIDATION = "0";
           WGPU_DEBUG = "0";
         });
-      }
+      } // (if builtins.elem system [ "x86_64-linux" "aarch64-linux" ] then {
+        packages = { default = wing; inherit wing; };
+        apps.default = { type = "app"; program = "${wing}/bin/wing"; };
+        apps.wing = { type = "app"; program = "${wing}/bin/wing"; };
+        checks.wing = wing;
+      } else {})
     );
 }

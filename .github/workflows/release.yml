@@ -36,15 +36,10 @@ jobs:
       # Nim, musl and Lua all come from the flake, so the release binary is built from the same
       # pins the dev shell uses and there is no second version to keep in step.
       - uses: DeterminateSystems/nix-installer-action@main
-      - name: Install dependencies
-        run: nix develop .#ci --command nimble install -y --depsOnly
       - name: Build release binary
         run: |
-          nix develop .#ci --command bash -c '
-            env WING_LUA="$LUA_MUSL" nim c -d:release \
-              --gcc.exe:"$MUSL_DEV/bin/musl-gcc" \
-              --gcc.linkerexe:"$MUSL_DEV/bin/musl-gcc" \
-              --passL:-static --out:wing src/wing.nim'
+          nix build --accept-flake-config --no-update-lock-file --print-build-logs .#wing
+          cp result/bin/wing wing
       # A binary that says "static" and comes out dynamic only fails for whoever downloads it, so
       # the tarball is not built until the ELF has been asked. `ldd` is not enough on its own: it
       # prints "statically linked" for a binary that still carries an INTERP and will not start.
@@ -60,7 +55,18 @@ jobs:
             fi
             ./wing --version'
       - name: Package
-        run: tar -czf "${{ matrix.artifact }}.tar.gz" wing
+        run: |
+          cp -r result/share/wing/templates templates
+          tar -czf "${{ matrix.artifact }}.tar.gz" wing templates
+          stage=$(mktemp -d)
+          tar -xzf "${{ matrix.artifact }}.tar.gz" -C "$stage"
+          export HOME="$stage/home"
+          export XDG_CONFIG_HOME="$HOME/config"
+          export XDG_DATA_HOME="$HOME/data"
+          mkdir -p "$HOME"
+          cd "$HOME"
+          "$stage/wing" template apply nim "$HOME/generated" --name archive_smoke --no-git
+          test -f "$HOME/generated/archive_smoke.nimble"
       # A tag is the trigger, so on the first run there is no release behind it yet: it is created
       # here rather than by hand, and reused on a re-run so a rebuilt asset replaces the old one.
       - name: Publish

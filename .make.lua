@@ -253,6 +253,18 @@ make.recipe{
 
 make.alias("v", "verify")
 
+make.recipe{
+  name = "nix-build",
+  desc = "build the Nix package",
+  run = function() sh.nix("build", "--accept-flake-config", ".#wing") end,
+}
+
+make.recipe{
+  name = "nix-check",
+  desc = "validate the flake and package install checks",
+  run = function() sh.nix("flake", "check", "--accept-flake-config", "--print-build-logs") end,
+}
+
 ---------------------------------------------------------------------------- shipping
 
 make.recipe{
