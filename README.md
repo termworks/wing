@@ -75,9 +75,10 @@ The flake declares the public `termworks` Cachix cache and signing key. To
 configure the cache globally instead, run `cachix use termworks` once.
 Only `v*` tags publish binaries; ordinary branch pushes do not.
 
-Only the latest release per package and architecture is protected from cache
-cleanup. Pins use `*-latest-*` with `--keep-revisions 1`; older releases may
-need rebuilding after garbage collection.
+Each package and architecture uses one stable pin, such as
+`wing-x86_64-linux`, with `--keep-revisions 5`. The five newest pin revisions
+are protected from cache cleanup; each binary retains its actual package version.
+Older revisions become eligible for garbage collection and may need rebuilding.
 
 From another flake, set `inputs.wing.url = "github:termworks/wing/v0.7.4"` and
 use `inputs.wing.packages.${system}.default`. Configure the cache in the
