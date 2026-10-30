@@ -71,14 +71,21 @@ nix build --accept-flake-config github:termworks/wing/v0.7.4
 nix run --accept-flake-config github:termworks/wing/v0.7.4 -- --help
 ```
 
-The flake declares the public `termworks` Cachix cache and signing key. To
-configure the cache globally instead, run `cachix use termworks` once.
+The flake declares the public `https://cache.bresilla.com/bresilla` cache and
+signing key. To configure the cache globally instead, add these settings to
+`/etc/nix/nix.conf` once:
+
+```ini
+extra-substituters = https://cache.bresilla.com/bresilla
+extra-trusted-public-keys = bresilla:zsecaZYIrjCJQS4AuGPmEVU5PRkiMmB/Mds3KaCzTvE=
+```
+
 Only `v*` tags publish binaries; ordinary branch pushes do not.
 
 Each package and architecture uses one stable pin, such as
-`wing-x86_64-linux`, with `--keep-revisions 5`. The five newest pin revisions
-are protected from cache cleanup; each binary retains its actual package version.
-Older revisions become eligible for garbage collection and may need rebuilding.
+`wing-x86_64-linux`, listed at <https://cache.bresilla.com/-/pins>. The pinned
+build is protected from cache cleanup; each binary retains its actual package
+version. Builds that are no longer pinned are removed and may need rebuilding.
 
 From another flake, set `inputs.wing.url = "github:termworks/wing/v0.7.4"` and
 use `inputs.wing.packages.${system}.default`. Configure the cache in the
