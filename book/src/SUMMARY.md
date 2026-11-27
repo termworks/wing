@@ -3,6 +3,7 @@
 - [Introduction](./chapter_1.md)
 - [Installation](./chapter_2.md)
 - [Projects](./projects.md)
+- [The wing server: tasks, plans, templates](./server.md)
 - [Machines](./machines.md)
 - [Templates](./templates.md)
 - [Configuration](./config.md)

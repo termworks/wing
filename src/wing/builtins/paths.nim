@@ -31,7 +31,10 @@ proc templateRoots*(): seq[string] =
     getCurrentDir() / "config" / "templates",
     getCurrentDir() / "templates",
     dataRoot() / "templates",
-    userTemplatesRoot()
+    userTemplatesRoot(),
+    # What `wing template pull` mirrors from the wing server. The server is where templates are
+    # edited, so its copy wins over every tree on this machine.
+    dataRoot() / "server" / "templates"
   ]
   for candidate in candidates:
     if dirExists(candidate) and candidate notin result:

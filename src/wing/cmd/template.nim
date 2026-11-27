@@ -1,12 +1,12 @@
 ## `wing template` — registry, bundled template install, and apply.
 
-import std/[os, sequtils, strutils]
+import std/[json, os, sequtils, strutils]
 
 import ../apply
+import ../builtins/paths
 import ../builtins/registry
+import ../server
 import ./plugin
-import ./template_update
-import ../templates/provenance
 import ../builtins/flavours
 import ../builtins/install
 import ../repo
@@ -35,6 +35,9 @@ Commands:
   allow NAME                  agree to an installed template's current contents
   uninstall NAME
   remove NAME
+  pull [--force]              mirror the wing server's templates (also done every 10 minutes)
+  push NAME [DIR]             upload a template folder to the wing server
+  push --all [ROOT]           upload every template folder under ROOT (default: config/templates)
 
 Python flavours:
   nix (default), uv, pixi, micromamba
@@ -51,10 +54,51 @@ proc handleTemplate*(argsIn: seq[string]) =
     return
   let command = args[0]
   args.delete(0)
+  if command notin ["pull", "push"]:
+    pullIfStale()
   let path = ensureTemplatesFile()
   var templates = parseTemplates(path)
 
   case command
+  of "pull", "fetch":
+    let force = popFlag(args, ["--force"])
+    rejectUnknownOptions(args)
+    try:
+      let pulled = pullTemplates(force)
+      echo "Templates from " & loadServer().host & ": " & $pulled.changed & " updated, " &
+          $pulled.kept & " unchanged, " & $pulled.removed & " removed"
+    except ServerError as error:
+      die(error.msg)
+  of "push", "upload":
+    let all = popFlag(args, ["--all"])
+    rejectUnknownOptions(args)
+    try:
+      if all:
+        let root = if args.len > 0: args[0] else: getCurrentDir() / "config" / "templates"
+        if not dirExists(root):
+          die("No template folder at " & root, 2)
+        var pushed = 0
+        for kind, dir in walkDir(root):
+          if kind == pcDir and not extractFilename(dir).startsWith("."):
+            discard pushTemplate(extractFilename(dir), dir)
+            echo "Pushed " & extractFilename(dir)
+            inc pushed
+        echo $pushed & " templates pushed to " & loadServer().host
+      else:
+        requireArgs(args, 1, "wing template push NAME [DIR]")
+        let name = args[0]
+        var dir = if args.len > 1: args[1] else: ""
+        if dir.len == 0:
+          # The folder wing itself would use, outside the pulled copy: pushing that back is a no-op.
+          for root in templateRoots():
+            if root != serverTemplatesRoot() and dirExists(root / name):
+              dir = root / name
+        if dir.len == 0 or not dirExists(dir):
+          die("No folder for template '" & name & "'; name it: wing template push " & name & " DIR", 2)
+        let answer = pushTemplate(name, dir)
+        echo "Pushed " & name & " from " & dir & " (" & answer{"hash"}.getStr()[0 ..< 8] & ")"
+    except ServerError as error:
+      die(error.msg)
   of "builtins", "builtin", "defaults":
     let force = popFlag(args, ["--force"])
     let raw = popFlag(args, ["-r", "--raw"])
@@ -279,12 +323,6 @@ proc handleTemplate*(argsIn: seq[string]) =
         renderedName, force, skipExisting, allowSymlinks)
     printList("Skipped placeholder replacements", skippedReplacements)
 
-    # What generated this, and what each file looked like when it did. Written before the git step
-    # so it lands in the first commit: a record that is not committed does not travel with the
-    # project, and travelling with it is the whole point.
-    writeProvenance(targetPath, recordOf(templateName, source.flavour,
-        renderedName, nowStamp(), targetPath))
-
     if not noGit:
       let repo = setupRepository(targetPath)
       let said = describe(repo)
@@ -296,12 +334,6 @@ proc handleTemplate*(argsIn: seq[string]) =
       else: ""
     echo "Template '" & templateName & "'" & flavourSuffix &
         " successfully applied to '" & targetPath & "'"
-  of "check", "outdated":
-    handleTemplateCheck(args)
-  of "diff":
-    handleTemplateDiff(args)
-  of "update", "sync":
-    handleTemplateUpdate(args)
   of "install":
     handleInstall(args)
   of "installed":

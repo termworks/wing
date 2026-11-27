@@ -9,6 +9,7 @@ import ../discovery
 import ../projects/locate
 import ../projects/remote_discovery
 import ../remote
+import ../server
 import ../store/machines
 import ../store/projects
 import ../types
@@ -27,6 +28,7 @@ proc registerFound(found: seq[Project]; label: string) =
   let counts = mergeDiscovered(projects, found, stamp)
   writeProjects(path, projects)
   echo label & ": " & $counts.added & " added, " & $counts.updated & " already known"
+  registerProjects(found)
 
 proc registerLocalDiscovered*(root: string; depth: int) =
   ## The same registration for this machine, so `--register` means the same thing either way.

@@ -11,6 +11,7 @@ import ../discovery
 import ../projects/layout
 import ../projects/locate
 import ../remote
+import ../server as server
 import ../store/machines
 import ../store/projects
 import ../types
@@ -29,6 +30,7 @@ proc registerProject(name, path, machine, language: string): bool =
       namespace: "default", language: language, tags: @[], createdAt: stamp,
       updatedAt: stamp))
   writeProjects(file, projects)
+  server.registerProject(projects[^1])
   true
 
 proc detectLanguage(path: string): string =

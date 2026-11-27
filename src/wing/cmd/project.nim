@@ -8,6 +8,7 @@ import ./project_clone
 import ./project_remote
 import ../discovery
 import ../jsonfmt
+import ../server
 import ../store/projects
 import ../types
 import ../util
@@ -78,6 +79,7 @@ proc handleProject*(argsIn: seq[string]) =
     writeProjects(path, projects)
     echo "Project '" & name & "' added successfully to namespace '" &
         namespace & "'"
+    registerProject(projects[^1])
   of "clone", "get":
     handleClone(args)
   of "adopt", "migrate":
@@ -148,6 +150,8 @@ proc handleProject*(argsIn: seq[string]) =
     if not dryRun and imported > 0:
       writeProjects(path, projects)
     echo "Import summary: " & $imported & " imported, " & $skipped & " skipped"
+    if not dryRun and imported > 0:
+      registerProjects(projects[^imported .. ^1])
   of "list", "l", "ls":
     let raw = popFlag(args, ["-r", "--raw"])
     let asJson = popFlag(args, ["--json"])
@@ -258,6 +262,7 @@ proc handleProject*(argsIn: seq[string]) =
         projects[i].updatedAt = nowStamp()
         writeProjects(path, projects)
         echo "Project '" & name & "' updated in namespace '" & namespace & "'"
+        registerProject(projects[i])
         return
     die("Project '" & name & "' not found in namespace '" & namespace & "'")
   of "rename", "mv":
@@ -275,6 +280,11 @@ proc handleProject*(argsIn: seq[string]) =
         writeProjects(path, projects)
         echo "Project '" & oldName & "' renamed to '" & newName &
             "' in namespace '" & namespace & "'"
+        # The server keeps the tasks under the old name; register the new one and say so rather
+        # than guess whether the two should be merged.
+        registerProject(projects[i])
+        if loadServer().configured:
+          echo "The server still has '" & oldName & "' and its tasks; remove it there if it is gone"
         return
     die("Project '" & oldName & "' not found in namespace '" & namespace & "'")
   of "tag", "tags":
@@ -296,6 +306,7 @@ proc handleProject*(argsIn: seq[string]) =
         projects[i].updatedAt = nowStamp()
         writeProjects(path, projects)
         echo "Project '" & name & "' tags updated in namespace '" & namespace & "'"
+        registerProject(projects[i], quiet = true)
         return
     die("Project '" & name & "' not found in namespace '" & namespace & "'")
   else:

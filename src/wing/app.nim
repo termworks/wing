@@ -15,9 +15,12 @@ import ./cmd/data
 import ./cmd/env
 import ./cmd/init
 import ./cmd/machine
+import ./cmd/new
 import ./cmd/project
+import ./cmd/server
 import ./cmd/sync
 import "./cmd/template"
+import ./cmd/todo
 
 proc main*() =
   var args = commandLineParams()
@@ -42,6 +45,16 @@ proc main*() =
   let command = args[0]
   args.delete(0)
   case command
+  of "new", "create":
+    handleNew(args)
+  of "todo", "td", "todos", "task", "tasks":
+    handleTodo(args)
+  of "plan", "pl", "plans":
+    handlePlan(args)
+  of "server", "login":
+    if command == "login":
+      args.insert("login", 0)
+    handleServer(args)
   of "project", "p", "projects", "proj":
     handleProject(args)
   of "machine", "m", "machines", "host", "hosts":
