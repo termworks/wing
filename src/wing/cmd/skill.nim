@@ -18,7 +18,8 @@ Commands:
   push NAME DIR           upload a skill folder (SKILL.md and what it points at)
   push --all DIR          upload every skill folder under DIR
 
-Pulled skills live in """ & serverSkillsRoot() & """.
+Pulled skills live in """ & serverSkillsRoot() &
+      """.
 They are linked into: """ & skillTargets().join(", ") & """
 (WING_SKILL_TARGETS, colon-separated, replaces that list).
 """
@@ -44,8 +45,8 @@ proc handleSkill*(argsIn: seq[string]) =
       rejectUnknownOptions(args)
       let pulled = pullBundles("skills", force)
       if not quiet or pulled.changed + pulled.removed > 0:
-        echo "Skills from " & loadServer().host & ": " & $pulled.changed & " updated, " &
-            $pulled.kept & " unchanged, " & $pulled.removed & " removed"
+        echo "Skills from $1: $2 updated, $3 unchanged, $4 removed" % [
+            loadServer().host, $pulled.changed, $pulled.kept, $pulled.removed]
       report(linkSkills())
     of "link":
       rejectUnknownOptions(args)
@@ -64,9 +65,11 @@ proc handleSkill*(argsIn: seq[string]) =
       for name in names:
         var places: seq[string]
         for target in skillTargets():
-          if symlinkExists(target / name) and expandSymlink(target / name) == root / name:
+          if symlinkExists(target / name) and expandSymlink(target / name) ==
+              root / name:
             places.add(target.replace(getHomeDir(), "~/"))
-        echo name & (if places.len > 0: paint("  " & places.join("  "), "2") else: paint("  not linked", "33"))
+        echo name & (if places.len > 0: paint("  " & places.join("  "),
+            "2") else: paint("  not linked", "33"))
     of "push", "upload":
       let all = popFlag(args, ["--all"])
       rejectUnknownOptions(args)

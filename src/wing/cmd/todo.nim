@@ -50,7 +50,8 @@ proc mark(state: string): string =
 
 proc taskLine(task: JsonNode; withProject = false): string =
   let priority = task["priority"].getInt(1)
-  let flag = if priority == 2: paint("!", "1;31") & " " elif priority == 0: paint("·", "2") & " " else: ""
+  let flag = if priority == 2: paint("!", "1;31") & " " elif priority ==
+      0: paint("·", "2") & " " else: ""
   result = mark(task["state"].getStr()) & " " & paint(align("#" & $task["number"].getInt(), 4), "2") & " " & flag &
            task["title"].getStr()
   var extra: seq[string]
@@ -185,7 +186,8 @@ proc handleTodo*(argsIn: seq[string]) =
     else:
       # `wing todo fix the build` reads as adding a task; anything else that is not a command is
       # more likely a typo of one, so only text with a space or a marker counts.
-      die("Unknown todo command: " & command & " (to add a task: wing todo add " & command & " ...)", 2)
+      die("Unknown todo command: " & command &
+          " (to add a task: wing todo add " & command & " ...)", 2)
   except ServerError as error:
     die(error.msg)
 
@@ -209,7 +211,8 @@ proc planLine(plan: JsonNode): string =
   let width = 12
   let filled = if total == 0: 0 else: (done * width) div total
   result = paint(align("#" & $plan["number"].getInt(), 4), "2") & " " &
-           paint(repeat("━", filled), "32") & paint(repeat("━", width - filled), "2") & " " &
+           paint(repeat("━", filled), "32") & paint(repeat("━", width -
+               filled), "2") & " " &
            align($done & "/" & $total, 5) & "  " & plan["title"].getStr()
   if plan["state"].getStr() == "closed":
     result.add(paint("  closed", "2"))

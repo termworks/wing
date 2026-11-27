@@ -65,8 +65,8 @@ proc handleTemplate*(argsIn: seq[string]) =
     rejectUnknownOptions(args)
     try:
       let pulled = pullTemplates(force)
-      echo "Templates from " & loadServer().host & ": " & $pulled.changed & " updated, " &
-          $pulled.kept & " unchanged, " & $pulled.removed & " removed"
+      echo "Templates from $1: $2 updated, $3 unchanged, $4 removed" % [
+          loadServer().host, $pulled.changed, $pulled.kept, $pulled.removed]
     except ServerError as error:
       die(error.msg)
   of "push", "upload":
@@ -94,9 +94,11 @@ proc handleTemplate*(argsIn: seq[string]) =
             if root != serverTemplatesRoot() and dirExists(root / name):
               dir = root / name
         if dir.len == 0 or not dirExists(dir):
-          die("No folder for template '" & name & "'; name it: wing template push " & name & " DIR", 2)
+          die("No folder for template '" & name &
+              "'; name it: wing template push " & name & " DIR", 2)
         let answer = pushTemplate(name, dir)
-        echo "Pushed " & name & " from " & dir & " (" & answer{"hash"}.getStr()[0 ..< 8] & ")"
+        echo "Pushed " & name & " from " & dir & " (" & answer{"hash"}.getStr()[
+            0 ..< 8] & ")"
     except ServerError as error:
       die(error.msg)
   of "builtins", "builtin", "defaults":

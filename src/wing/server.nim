@@ -61,16 +61,19 @@ proc request*(config: ServerConfig; meth, path: string; body: JsonNode = nil;
     bodyFile = getTempDir() / ("wing-request-" & $getCurrentProcessId() & ".json")
     writeFile(bodyFile, $body)
     args.add(@["-H", "Content-Type: application/json", "--data-binary", "@" & bodyFile])
-  let process = startProcess("curl", args = args, options = {poUsePath, poStdErrToStdOut})
+  let process = startProcess("curl", args = args, options = {poUsePath,
+      poStdErrToStdOut})
   try:
     let input = process.inputStream()
-    input.write("header = " & quoteConfig("Authorization: Bearer " & config.token) & "\n")
+    input.write("header = " & quoteConfig("Authorization: Bearer " &
+        config.token) & "\n")
     input.write("url = " & quoteConfig(config.url & path) & "\n")
     input.close()
     let output = process.outputStream().readAll()
     let exitCode = process.waitForExit()
     if exitCode != 0:
-      raise newException(ServerError, "could not reach " & config.url & ": " & output.strip())
+      raise newException(ServerError, "could not reach " & config.url & ": " &
+          output.strip())
     let cut = output.rfind('\n')
     let code = output[cut + 1 .. ^1].strip()
     let text = if cut > 0: output[0 ..< cut] else: ""
@@ -82,7 +85,8 @@ proc request*(config: ServerConfig; meth, path: string; body: JsonNode = nil;
         raise newException(ServerError, config.url & " answered " & code & " with something that is not JSON")
     if not code.startsWith("2"):
       let said = if parsed.kind == JObject: parsed{"error"}.getStr() else: ""
-      raise newException(ServerError, (if said.len > 0: said else: config.url & " answered " & code))
+      raise newException(ServerError, (if said.len > 0: said else: config.url &
+          " answered " & code))
     parsed
   finally:
     process.close()
@@ -150,9 +154,11 @@ proc registerProjects*(projects: openArray[Project]; quiet = false) =
       discard config.request("POST", "/api/projects", projectPayload(project))
       inc done
     except ServerError as error:
-      stderr.writeLine("wing: could not register '" & project.name & "' on " & config.host & ": " & error.msg)
+      stderr.writeLine("wing: could not register '" & project.name & "' on " &
+          config.host & ": " & error.msg)
   if done > 0 and not quiet:
-    echo "Registered " & (if done == 1: "'" & projects[0].name & "'" else: $done & " projects") & " on " & config.host
+    echo "Registered " & (if done == 1: "'" & projects[0].name &
+        "'" else: $done & " projects") & " on " & config.host
 
 proc registerProject*(project: Project; quiet = false) =
   registerProjects([project], quiet)
@@ -198,7 +204,8 @@ proc pullBundles*(plural: string; force = false): tuple[changed, removed, kept: 
       continue
     wanted.add(name)
     hashes[name] = %hash
-    if not force and previous != nil and previous{name}.getStr() == hash and dirExists(root / name):
+    if not force and previous != nil and previous{name}.getStr() == hash and
+        dirExists(root / name):
       inc result.kept
       continue
     let full = config.request("GET", "/api/" & plural & "/" & enc(name))
@@ -243,7 +250,8 @@ proc pullIfStale*(maxAge = 600) =
   try:
     discard pullTemplates()
   except CatchableError as error:
-    stderr.writeLine("wing: templates not refreshed from " & config.host & ": " & error.msg)
+    stderr.writeLine("wing: templates not refreshed from " & config.host &
+        ": " & error.msg)
 
 proc templatePayload*(dir: string): JsonNode =
   ## Every file under a template or skill folder, as the server stores them.
@@ -258,7 +266,8 @@ proc templatePayload*(dir: string): JsonNode =
     var mode = 0o644
     if fpUserExec in getFilePermissions(full):
       mode = 0o755
-    files.add(%*{"path": parts.join("/"), "mode": mode, "data": base64.encode(readFile(full))})
+    files.add(%*{"path": parts.join("/"), "mode": mode, "data": base64.encode(
+        readFile(full))})
   %*{"files": files}
 
 proc pushBundle*(plural, name, dir: string): JsonNode =
@@ -315,7 +324,8 @@ proc linkSkills*(): tuple[linked, removed: int; skipped: seq[string]] =
 # --- Tasks and plans -----------------------------------------------------------------------
 
 proc projectTasks*(project: string; state = ""): JsonNode =
-  api("/projects/" & enc(project) & "/tasks" & (if state.len > 0: "?state=" & enc(state) else: ""))
+  api("/projects/" & enc(project) & "/tasks" & (if state.len > 0: "?state=" &
+      enc(state) else: ""))
 
 proc allTasks*(state = ""): JsonNode =
   api("/tasks" & (if state.len > 0: "?state=" & enc(state) else: ""))
@@ -341,7 +351,8 @@ proc getPlan*(project: string; number: int): JsonNode =
   api("/projects/" & enc(project) & "/plans/" & $number)
 
 proc addPlan*(project, title, notes: string): JsonNode =
-  api("/projects/" & enc(project) & "/plans", "POST", %*{"title": title, "notes": notes})
+  api("/projects/" & enc(project) & "/plans", "POST", %*{"title": title,
+      "notes": notes})
 
 proc changePlan*(project: string; number: int; fields: JsonNode): JsonNode =
   api("/projects/" & enc(project) & "/plans/" & $number, "PATCH", fields)

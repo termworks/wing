@@ -22,7 +22,8 @@ block payload:
   doAssert body["tags"][0].getStr() == "a"
   doAssert body["checkout"]["path"].getStr() == scratch
   doAssert body["checkout"]["machine"].getStr() == thisMachine()
-  let filed = projectPayload(Project(name: "x", namespace: "termworks", machine: "lab", path: "/srv/x"))
+  let filed = projectPayload(Project(name: "x", namespace: "termworks",
+      machine: "lab", path: "/srv/x"))
   doAssert filed["namespace"].getStr() == "termworks"
   doAssert filed["checkout"]["machine"].getStr() == "lab"
   doAssert not filed.hasKey("remotes"), "remotes of a checkout elsewhere are not read here"
@@ -65,7 +66,8 @@ block environmentWins:
   putEnv("WING_SERVER", "https://wing.example/")
   putEnv("WING_TOKEN", "t")
   let config = loadServer()
-  doAssert config.url == "https://wing.example" and config.token == "t" and config.host == "wing.example"
+  doAssert config.url == "https://wing.example" and config.token == "t" and
+      config.host == "wing.example"
   putEnv("WING_SERVER", "")
   putEnv("WING_TOKEN", "")
 
@@ -91,7 +93,8 @@ block skillLinks:
   doAssert linkSkills().linked == 0, "linking again changes nothing"
   removeDir(root / "one")
   let after = linkSkills()
-  doAssert after.removed == 2 and not symlinkExists(agentA / "one") and not symlinkExists(agentB / "one")
+  doAssert after.removed == 2 and not symlinkExists(agentA / "one") and
+      not symlinkExists(agentB / "one")
   doAssert symlinkExists(agentA / "two")
   putEnv("WING_SKILL_TARGETS", "")
 
