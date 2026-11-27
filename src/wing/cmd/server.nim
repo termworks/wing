@@ -1,6 +1,6 @@
 ## `wing server` — log in to a wing server and keep the projects registered there.
 
-import std/[json, os, strutils]
+import std/[json, os, strutils, terminal]
 
 import ../cliargs
 import ../server
@@ -12,7 +12,8 @@ proc showServerHelp() =
 Usage: wing server <COMMAND>
 
 Commands:
-  login URL --token TOKEN   remember the server and a token from its settings page
+  login URL [--token TOKEN] remember the server and a token from its settings page
+                            (without --token, it asks for one)
   logout                    forget them
   status                    where this machine is logged in, and whether it answers
   sync                      register every project of this machine on the server
@@ -37,8 +38,16 @@ proc handleServer*(argsIn: seq[string]) =
     if not url.contains("://"):
       url = "https://" & url
     if token.len == 0:
-      stdout.write("Token (from " & url & "/settings): ")
-      token = stdin.readLine().strip()
+      # Asked for, and not echoed: a token typed into a terminal should not stay on the screen.
+      stdout.write("Token (make one at " & url & "/settings): ")
+      flushFile(stdout)
+      if isatty(stdin):
+        token = readPasswordFromStdin("").strip()
+        echo ""
+      else:
+        token = stdin.readLine().strip()
+      if token.len == 0:
+        die("No token given", 2)
     let config = ServerConfig(url: url, token: token)
     try:
       let found = config.request("GET", "/api/projects")
