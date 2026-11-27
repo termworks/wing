@@ -1,6 +1,6 @@
 # Package
 
-version       = "0.7.4"
+version       = "0.8.0"
 author        = "Trim Bresilla"
 description   = "Development workflow and project management CLI"
 license       = "MIT"

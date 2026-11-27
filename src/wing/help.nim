@@ -12,6 +12,10 @@ proc showHelp*() =
       paint("<COMMAND>", "33")
   echo ""
   echo paint("Main commands:", "1;36")
+  echo helpLine("new", "", "A project from a template, registered everywhere", "1;32")
+  echo helpLine("todo", "td", "This project's tasks, on the wing server", "1;32")
+  echo helpLine("plan", "pl", "This project's plans, on the wing server", "1;32")
+  echo helpLine("skill", "sk", "Agent skills from the wing server, linked into every agent", "1;32")
   echo helpLine("project", "p", "Project and code creation", "1;32")
   echo helpLine("machine", "m", "Add or edit hostnames and ssh", "1;32")
   echo helpLine("template", "t", "Project template management", "1;32")
@@ -22,6 +26,7 @@ proc showHelp*() =
   echo helpLine("status", "st", "What is uncommitted or unpushed, everywhere", "1;32")
   echo ""
   echo paint("Other commands:", "1;36")
+  echo helpLine("server", "", "Log in to a wing server and register projects there", "1;34")
   echo helpLine("init", "", "Initialize wing data and register templates",
       "1;34")
   echo helpLine("doctor", "", "Check the setup and say what to fix", "1;34")
@@ -47,6 +52,10 @@ proc commandReferenceMarkdown*(): string =
 
 ## Main commands
 
+- `wing new TEMPLATE PATH` — apply a template and register the project, here and on the server.
+- `wing todo ...` — the current project's tasks, kept on the wing server.
+- `wing plan ...` — the current project's plans, kept on the wing server.
+- `wing skill ...` — agent skills from the wing server, linked into Claude, Codex and ~/.agents.
 - `wing project ...` — manage projects, discovery, import, JSON listing.
 - `wing machine ...` — manage SSH hosts, SSH config, health checks.
 - `wing template ...` — manage and safely apply project templates.
@@ -55,6 +64,7 @@ proc commandReferenceMarkdown*(): string =
 
 ## Other commands
 
+- `wing server login URL --token TOKEN` — log in to a wing server; `status`, `sync`, `logout`.
 - `wing init` — initialize local wing data and register available templates.
 - `wing data ...` — backup, restore, export, and import wing data.
 - `wing completions SHELL` — generate bash, zsh, or fish completions.

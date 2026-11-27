@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.8.0] - 2026-11-27
+
+### <!-- 0 -->⛰️  Features
+
+- Agent skills from the wing server
+- Checkouts per machine, client tests
+- Wing server, todo, plan and templates
+
+### <!-- 7 -->⚙️ Miscellaneous Tasks
+
+- Merge main
+- Retain five package revisions
+- Merge develop
+- Publish to cache.bresilla.com
+- Retain five package revisions
+
 ## [0.7.4] - 2026-10-04
 
 ### <!-- 0 -->⛰️  Features
