@@ -1,0 +1,264 @@
+<!DOCTYPE HTML>
+<html lang="en" class="navy sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>The wing server: tasks, plans, templates - wing</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon.svg">
+        <link rel="shortcut icon" href="favicon.png">
+        <link rel="stylesheet" href="css/variables.css">
+        <link rel="stylesheet" href="css/general.css">
+        <link rel="stylesheet" href="css/chrome.css">
+        <link rel="stylesheet" href="css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="highlight.css">
+        <link rel="stylesheet" href="tomorrow-night.css">
+        <link rel="stylesheet" href="ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "navy";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('navy')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">wing</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="the-wing-server"><a class="header" href="#the-wing-server">The wing server</a></h1>
+<p>A wing server (such as wing.bresilla.com) keeps what is not about one machine: every project and
+its remotes, each project's tasks and plans, and the templates projects are made from. wing on each
+machine talks to it with a token made on the server's settings page.</p>
+<pre><code class="language-sh">wing server login https://wing.bresilla.com --token wing_…
+wing server status
+wing server sync          # register every project this machine knows
+</code></pre>
+<p>The token is kept in <code>$XDG_DATA_HOME/wing/server.json</code>, readable by you only. <code>WING_SERVER</code> and
+<code>WING_TOKEN</code> override it. Requests go through <code>curl</code>.</p>
+<h2 id="projects"><a class="header" href="#projects">Projects</a></h2>
+<p>Once logged in, a project is registered on the server whenever wing adds or changes one here:
+<code>wing new</code>, <code>project add</code>, <code>clone</code>, <code>adopt</code>, <code>import</code>, <code>discover --register</code>, <code>set</code> and <code>tag</code>.
+The server reads the checkout's git remotes; a remote on the server's git host brings the
+project's version, commits, issues and builds onto its page.</p>
+<p>Each registration also says which machine has the project checked out and where, so the
+project's page lists every checkout. Removing a project here never removes it on the server:
+its tasks live there.</p>
+<pre><code class="language-sh">wing new rust ~/code/thing --namespace termworks     # template, git, registry, server
+</code></pre>
+<h2 id="tasks-and-plans"><a class="header" href="#tasks-and-plans">Tasks and plans</a></h2>
+<p>Every task and every plan belongs to one project, numbered within it. The project is the one the
+current directory is in (or <code>--project NAME</code>, or <code>WING_PROJECT</code>).</p>
+<pre><code class="language-sh">wing todo                          # open tasks, what is being done first
+wing todo add fix the release +1 !high
+wing todo start 3
+wing todo done 3
+wing todo edit 4 --due 2026-12-01 --notes "after the freeze"
+wing todo --all                    # every project's
+wing plan add first release --notes "what it takes"
+wing plan show 1
+wing plan close 1
+</code></pre>
+<p>In a task's text, <code>+PLAN</code> puts it in a plan (its number, or a one-word title), and <code>!high</code> or
+<code>!low</code> sets its priority.</p>
+<h2 id="templates"><a class="header" href="#templates">Templates</a></h2>
+<p>Templates are edited on the server, in its Templates tab: every file of every template, with new
+files, uploads, renames and the executable bit. <code>common/</code> is there too.</p>
+<pre><code class="language-sh">wing template pull                 # mirror them here (also done every 10 minutes on use)
+wing template push rust ./rust     # upload a template folder
+wing template push --all           # every folder under config/templates
+</code></pre>
+<p>Pulled templates live in <code>$XDG_DATA_HOME/wing/server/templates</code> and win over every other
+template root, since the server is where they are edited.</p>
+<p>Generated projects carry no wing file of their own.</p>
+<h2 id="skills"><a class="header" href="#skills">Skills</a></h2>
+<p>Agent skills (a folder with a <code>SKILL.md</code>, and whatever it points at) are kept on the server the
+same way, in its Skills tab, and edited there.</p>
+<pre><code class="language-sh">wing skill pull                    # mirror them, and link each into every agent
+wing skill list                    # what is here, and where it is linked
+wing skill push --all ~/old/skills # upload every folder that has a SKILL.md
+wing skill push NAME DIR
+</code></pre>
+<p>Pulled skills live in <code>$XDG_DATA_HOME/wing/server/skills</code> and are linked into
+<code>~/.claude/skills</code>, <code>~/.codex/skills</code> and <code>~/.agents/skills</code> (<code>WING_SKILL_TARGETS</code>,
+colon-separated, replaces that list). A link another tool made is taken over; a real folder of
+the same name is left alone and reported. When a skill is deleted on the server, the next pull
+removes it and its links.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="projects.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="machines.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="projects.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="machines.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr.min.js"></script>
+        <script src="mark.min.js"></script>
+        <script src="searcher.js"></script>
+
+        <script src="clipboard.min.js"></script>
+        <script src="highlight.js"></script>
+        <script src="book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </div>
+    </body>
+</html>

@@ -287,6 +287,64 @@ thing on that machine instead: clone there, register it as living there.</p>
 <p><code>adopt</code> reads the origin remote to work out where a checkout belongs, moves it, and registers it.
 A directory with no origin has nowhere to be filed, so it says so and <code>--in-place</code> is how you
 register it where it is.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="the-wing-server"><a class="header" href="#the-wing-server">The wing server</a></h1>
+<p>A wing server (such as wing.bresilla.com) keeps what is not about one machine: every project and
+its remotes, each project's tasks and plans, and the templates projects are made from. wing on each
+machine talks to it with a token made on the server's settings page.</p>
+<pre><code class="language-sh">wing server login https://wing.bresilla.com --token wing_…
+wing server status
+wing server sync          # register every project this machine knows
+</code></pre>
+<p>The token is kept in <code>$XDG_DATA_HOME/wing/server.json</code>, readable by you only. <code>WING_SERVER</code> and
+<code>WING_TOKEN</code> override it. Requests go through <code>curl</code>.</p>
+<h2 id="projects-1"><a class="header" href="#projects-1">Projects</a></h2>
+<p>Once logged in, a project is registered on the server whenever wing adds or changes one here:
+<code>wing new</code>, <code>project add</code>, <code>clone</code>, <code>adopt</code>, <code>import</code>, <code>discover --register</code>, <code>set</code> and <code>tag</code>.
+The server reads the checkout's git remotes; a remote on the server's git host brings the
+project's version, commits, issues and builds onto its page.</p>
+<p>Each registration also says which machine has the project checked out and where, so the
+project's page lists every checkout. Removing a project here never removes it on the server:
+its tasks live there.</p>
+<pre><code class="language-sh">wing new rust ~/code/thing --namespace termworks     # template, git, registry, server
+</code></pre>
+<h2 id="tasks-and-plans"><a class="header" href="#tasks-and-plans">Tasks and plans</a></h2>
+<p>Every task and every plan belongs to one project, numbered within it. The project is the one the
+current directory is in (or <code>--project NAME</code>, or <code>WING_PROJECT</code>).</p>
+<pre><code class="language-sh">wing todo                          # open tasks, what is being done first
+wing todo add fix the release +1 !high
+wing todo start 3
+wing todo done 3
+wing todo edit 4 --due 2026-12-01 --notes "after the freeze"
+wing todo --all                    # every project's
+wing plan add first release --notes "what it takes"
+wing plan show 1
+wing plan close 1
+</code></pre>
+<p>In a task's text, <code>+PLAN</code> puts it in a plan (its number, or a one-word title), and <code>!high</code> or
+<code>!low</code> sets its priority.</p>
+<h2 id="templates"><a class="header" href="#templates">Templates</a></h2>
+<p>Templates are edited on the server, in its Templates tab: every file of every template, with new
+files, uploads, renames and the executable bit. <code>common/</code> is there too.</p>
+<pre><code class="language-sh">wing template pull                 # mirror them here (also done every 10 minutes on use)
+wing template push rust ./rust     # upload a template folder
+wing template push --all           # every folder under config/templates
+</code></pre>
+<p>Pulled templates live in <code>$XDG_DATA_HOME/wing/server/templates</code> and win over every other
+template root, since the server is where they are edited.</p>
+<p>Generated projects carry no wing file of their own.</p>
+<h2 id="skills"><a class="header" href="#skills">Skills</a></h2>
+<p>Agent skills (a folder with a <code>SKILL.md</code>, and whatever it points at) are kept on the server the
+same way, in its Skills tab, and edited there.</p>
+<pre><code class="language-sh">wing skill pull                    # mirror them, and link each into every agent
+wing skill list                    # what is here, and where it is linked
+wing skill push --all ~/old/skills # upload every folder that has a SKILL.md
+wing skill push NAME DIR
+</code></pre>
+<p>Pulled skills live in <code>$XDG_DATA_HOME/wing/server/skills</code> and are linked into
+<code>~/.claude/skills</code>, <code>~/.codex/skills</code> and <code>~/.agents/skills</code> (<code>WING_SKILL_TARGETS</code>,
+colon-separated, replaces that list). A link another tool made is taken over; a real folder of
+the same name is left alone and reported. When a skill is deleted on the server, the next pull
+removes it and its links.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="machines"><a class="header" href="#machines">Machines</a></h1>
 <p>Machines store SSH targets and host interfaces, and drive a tight SSH
 integration: <code>connect</code>, <code>check --ssh</code>, and <code>sync</code> all reuse one <strong>ControlMaster
@@ -405,7 +463,7 @@ interface for reaching a specific route on purpose. The file is wing's — it is
 change the machine with <code>wing machine set</code> rather than editing it. The <code>Include</code> goes first because
 ssh takes the first value it sees for each option, so one added at the bottom loses to anything
 above it.</p>
-<div style="break-before: page; page-break-before: always;"></div><h1 id="templates"><a class="header" href="#templates">Templates</a></h1>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="templates-1"><a class="header" href="#templates-1">Templates</a></h1>
 <p>Templates are copied safely with conflict detection, optional dry-runs, and
 explicit symlink handling.</p>
 <pre><code class="language-sh">wing template add base --description "Base app" --path ./template
@@ -589,31 +647,6 @@ plus one selected environment flavour overlay.</p>
 <p>A generated project is driven by <code>.make.lua</code> and <code>.env.lua</code> rather than a
 Makefile and an <code>.envrc</code>, so the same <code>make build</code> / <code>make test</code> / <code>make verify</code>
 recipes work in every language wing generates.</p>
-<h3 id="keeping-a-project-up-to-date-with-its-template"><a class="header" href="#keeping-a-project-up-to-date-with-its-template">Keeping a project up to date with its template</a></h3>
-<p>A template applied once is a copy: the day a workflow is fixed or a recipe added, every project
-already generated keeps the old one. These three commands are the other direction.</p>
-<pre><code class="language-sh">wing template check      # is this project behind its template
-wing template diff       # what the template would change
-wing template update     # take those changes
-wing template update --force   # …including the ones you also edited
-</code></pre>
-<p>They run in a generated project — from any directory inside it — and read <code>.wing.toml</code>, which
-<code>apply</code> writes at the top of the project. That file records the template, the flavour, the name it
-was generated with, and a hash of every file as it was written. <strong>Commit it</strong>: it has to travel with
-the project, and it lands in the first commit because it is written before <code>git init</code>.</p>
-<p>The hashes are what make the answer trustworthy. Comparing a project against a fresh render of the
-template gives three cases rather than one:</p>
-<div class="table-wrapper"><table><thead><tr><th></th><th></th></tr></thead><tbody>
-<tr><td><code>update</code></td><td>the template changed and nobody has touched this file here — safe to take</td></tr>
-<tr><td><code>yours</code></td><td>you edited it and the template did not move — left alone</td></tr>
-<tr><td><code>conflict</code></td><td>both — skipped, and <code>--force</code> is how you say the template wins</td></tr>
-</tbody></table>
-</div>
-<p>An update rewrites the hashes only for the files it actually wrote. Re-recording the whole tree
-would take your edits as "what the template wrote", and the next update would quietly revert them.</p>
-<p>A file the template no longer writes is reported and never deleted: it may have become the
-project's own, and no template change is worth removing work.</p>
-<p><code>check</code> exits non-zero when a project is behind, so it works in CI.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="configuration"><a class="header" href="#configuration">Configuration</a></h1>
 <p>wing embeds a Lua 5.4 interpreter and reads two kinds of Lua: a <code>template.lua</code> beside each
 template, and one <code>init.lua</code> of your own.</p>
