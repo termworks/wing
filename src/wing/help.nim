@@ -15,6 +15,7 @@ proc showHelp*() =
   echo helpLine("new", "", "A project from a template, registered everywhere", "1;32")
   echo helpLine("todo", "td", "This project's tasks, on the wing server", "1;32")
   echo helpLine("plan", "pl", "This project's plans, on the wing server", "1;32")
+  echo helpLine("skill", "sk", "Agent skills from the wing server, linked into every agent", "1;32")
   echo helpLine("project", "p", "Project and code creation", "1;32")
   echo helpLine("machine", "m", "Add or edit hostnames and ssh", "1;32")
   echo helpLine("template", "t", "Project template management", "1;32")
@@ -54,6 +55,7 @@ proc commandReferenceMarkdown*(): string =
 - `wing new TEMPLATE PATH` — apply a template and register the project, here and on the server.
 - `wing todo ...` — the current project's tasks, kept on the wing server.
 - `wing plan ...` — the current project's plans, kept on the wing server.
+- `wing skill ...` — agent skills from the wing server, linked into Claude, Codex and ~/.agents.
 - `wing project ...` — manage projects, discovery, import, JSON listing.
 - `wing machine ...` — manage SSH hosts, SSH config, health checks.
 - `wing template ...` — manage and safely apply project templates.

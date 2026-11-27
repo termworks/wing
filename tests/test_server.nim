@@ -69,6 +69,32 @@ block environmentWins:
   putEnv("WING_SERVER", "")
   putEnv("WING_TOKEN", "")
 
+block skillLinks:
+  # Pulled skills are linked into every agent folder: an older tool's link is taken over, a real
+  # folder is left alone, and a link to a skill the server dropped goes.
+  let agentA = scratch / "agents-a"
+  let agentB = scratch / "agents-b"
+  putEnv("WING_SKILL_TARGETS", agentA & ":" & agentB)
+  let root = serverSkillsRoot()
+  for name in ["one", "two"]:
+    createDir(root / name)
+    writeFile(root / name / "SKILL.md", "---\nname: " & name & "\n---\n")
+  createDir(agentA)
+  createDir(scratch / "elsewhere" / "one")
+  createSymlink(scratch / "elsewhere" / "one", agentA / "one")
+  createDir(agentB / "two")
+  let first = linkSkills()
+  doAssert expandSymlink(agentA / "one") == root / "one", "an older link is taken over"
+  doAssert expandSymlink(agentB / "one") == root / "one"
+  doAssert dirExists(agentB / "two") and not symlinkExists(agentB / "two"), "a real folder stays"
+  doAssert first.skipped == @[agentB / "two"]
+  doAssert linkSkills().linked == 0, "linking again changes nothing"
+  removeDir(root / "one")
+  let after = linkSkills()
+  doAssert after.removed == 2 and not symlinkExists(agentA / "one") and not symlinkExists(agentB / "one")
+  doAssert symlinkExists(agentA / "two")
+  putEnv("WING_SKILL_TARGETS", "")
+
 # The commands, through the binary.
 compileBinary()
 let env = freshEnv("server")

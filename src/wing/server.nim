@@ -157,29 +157,37 @@ proc registerProjects*(projects: openArray[Project]; quiet = false) =
 proc registerProject*(project: Project; quiet = false) =
   registerProjects([project], quiet)
 
-# --- Templates -----------------------------------------------------------------------------
+# --- Templates and skills ------------------------------------------------------------------
+# Both are folders of files the server keeps (`plural` is "templates" or "skills"), mirrored
+# here into one folder each.
+
+proc serverRoot*(plural: string): string =
+  dataRoot() / "server" / plural
 
 proc serverTemplatesRoot*(): string =
   ## Where pulled templates live: one more template root, the most specific one.
-  dataRoot() / "server" / "templates"
+  serverRoot("templates")
 
-proc pullStatePath(): string =
-  dataRoot() / "server" / "templates.json"
+proc serverSkillsRoot*(): string =
+  serverRoot("skills")
 
-proc readPullState(): JsonNode =
+proc pullStatePath(plural: string): string =
+  dataRoot() / "server" / (plural & ".json")
+
+proc readPullState(plural: string): JsonNode =
   try:
-    result = parseFile(pullStatePath())
+    result = parseFile(pullStatePath(plural))
   except CatchableError:
     result = %*{"pulled": 0, "hashes": {}}
 
-proc pullTemplates*(force = false): tuple[changed, removed, kept: int] =
-  ## Mirror the server's templates into serverTemplatesRoot(): fetch what changed, drop what the
-  ## server no longer has. Each template is written beside its old copy and swapped in whole.
+proc pullBundles*(plural: string; force = false): tuple[changed, removed, kept: int] =
+  ## Mirror the server's templates or skills: fetch what changed, drop what the server no longer
+  ## has. Each one is written beside its old copy and swapped in whole.
   let config = loadServer()
-  let listing = config.request("GET", "/api/templates")
-  let root = serverTemplatesRoot()
+  let listing = config.request("GET", "/api/" & plural)
+  let root = serverRoot(plural)
   createDir(root)
-  var state = readPullState()
+  var state = readPullState(plural)
   let previous = state{"hashes"}
   var hashes = newJObject()
   var wanted: seq[string]
@@ -193,7 +201,7 @@ proc pullTemplates*(force = false): tuple[changed, removed, kept: int] =
     if not force and previous != nil and previous{name}.getStr() == hash and dirExists(root / name):
       inc result.kept
       continue
-    let full = config.request("GET", "/api/templates/" & enc(name))
+    let full = config.request("GET", "/api/" & plural & "/" & enc(name))
     let staging = root / ("." & name & ".new")
     removeDir(staging)
     createDir(staging)
@@ -219,14 +227,17 @@ proc pullTemplates*(force = false): tuple[changed, removed, kept: int] =
       inc result.removed
   state["hashes"] = hashes
   state["pulled"] = %getTime().toUnix()
-  writeFile(pullStatePath(), $state)
+  writeFile(pullStatePath(plural), $state)
+
+proc pullTemplates*(force = false): tuple[changed, removed, kept: int] =
+  pullBundles("templates", force)
 
 proc pullIfStale*(maxAge = 600) =
   ## Keep the pulled templates fresh without making every command wait on the network.
   let config = loadServer()
   if not config.configured or getEnv("WING_TEMPLATE_DIR").len > 0:
     return
-  let last = readPullState(){"pulled"}.getBiggestInt(0)
+  let last = readPullState("templates"){"pulled"}.getBiggestInt(0)
   if getTime().toUnix() - last < maxAge:
     return
   try:
@@ -235,7 +246,7 @@ proc pullIfStale*(maxAge = 600) =
     stderr.writeLine("wing: templates not refreshed from " & config.host & ": " & error.msg)
 
 proc templatePayload*(dir: string): JsonNode =
-  ## Every file under a template folder, as the server stores them.
+  ## Every file under a template or skill folder, as the server stores them.
   var files = newJArray()
   for rel in walkDirRec(dir, relative = true, skipSpecial = true):
     let full = dir / rel
@@ -250,8 +261,56 @@ proc templatePayload*(dir: string): JsonNode =
     files.add(%*{"path": parts.join("/"), "mode": mode, "data": base64.encode(readFile(full))})
   %*{"files": files}
 
+proc pushBundle*(plural, name, dir: string): JsonNode =
+  api("/" & plural & "/" & enc(name), "PUT", templatePayload(dir))
+
 proc pushTemplate*(name, dir: string): JsonNode =
-  api("/templates/" & enc(name), "PUT", templatePayload(dir))
+  pushBundle("templates", name, dir)
+
+# --- Skills in the agents' folders ---------------------------------------------------------
+
+proc skillTargets*(): seq[string] =
+  ## The folders coding agents read skills from. WING_SKILL_TARGETS (colon-separated) replaces
+  ## the default set: Claude Code, Codex, and the shared ~/.agents that the others read.
+  let fromEnv = getEnv("WING_SKILL_TARGETS")
+  if fromEnv.len > 0:
+    for part in fromEnv.split(':'):
+      if part.strip().len > 0:
+        result.add(expandTilde(part.strip()))
+    return
+  let home = getHomeDir()
+  @[home / ".claude" / "skills", home / ".codex" / "skills", home / ".agents" / "skills"]
+
+proc linkSkills*(): tuple[linked, removed: int; skipped: seq[string]] =
+  ## Every pulled skill linked into every agent folder. A link that points elsewhere (an older
+  ## tool's) is taken over; a real folder of the same name is somebody's own and left alone. Links
+  ## into the pulled skills whose skill is gone are removed.
+  let root = serverSkillsRoot()
+  var names: seq[string]
+  if dirExists(root):
+    for kind, path in walkDir(root):
+      if kind == pcDir and not extractFilename(path).startsWith("."):
+        names.add(extractFilename(path))
+  for target in skillTargets():
+    createDir(target)
+    for name in names:
+      let entry = target / name
+      let source = root / name
+      if symlinkExists(entry):
+        if expandSymlink(entry) == source:
+          continue
+        removeFile(entry)
+      elif fileExists(entry) or dirExists(entry):
+        result.skipped.add(entry)
+        continue
+      createSymlink(source, entry)
+      inc result.linked
+    for kind, path in walkDir(target):
+      if kind in {pcLinkToDir, pcLinkToFile}:
+        let points = expandSymlink(path)
+        if points.startsWith(root & DirSep) and extractFilename(path) notin names:
+          removeFile(path)
+          inc result.removed
 
 # --- Tasks and plans -----------------------------------------------------------------------
 

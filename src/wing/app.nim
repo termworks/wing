@@ -18,6 +18,7 @@ import ./cmd/machine
 import ./cmd/new
 import ./cmd/project
 import ./cmd/server
+import ./cmd/skill
 import ./cmd/sync
 import "./cmd/template"
 import ./cmd/todo
@@ -51,6 +52,8 @@ proc main*() =
     handleTodo(args)
   of "plan", "pl", "plans":
     handlePlan(args)
+  of "skill", "sk", "skills":
+    handleSkill(args)
   of "server", "login":
     if command == "login":
       args.insert("login", 0)

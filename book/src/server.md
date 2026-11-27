@@ -63,3 +63,21 @@ Pulled templates live in `$XDG_DATA_HOME/wing/server/templates` and win over eve
 template root, since the server is where they are edited.
 
 Generated projects carry no wing file of their own.
+
+## Skills
+
+Agent skills (a folder with a `SKILL.md`, and whatever it points at) are kept on the server the
+same way, in its Skills tab, and edited there.
+
+```sh
+wing skill pull                    # mirror them, and link each into every agent
+wing skill list                    # what is here, and where it is linked
+wing skill push --all ~/old/skills # upload every folder that has a SKILL.md
+wing skill push NAME DIR
+```
+
+Pulled skills live in `$XDG_DATA_HOME/wing/server/skills` and are linked into
+`~/.claude/skills`, `~/.codex/skills` and `~/.agents/skills` (`WING_SKILL_TARGETS`,
+colon-separated, replaces that list). A link another tool made is taken over; a real folder of
+the same name is left alone and reported. When a skill is deleted on the server, the next pull
+removes it and its links.
