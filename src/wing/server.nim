@@ -109,6 +109,13 @@ proc gitRemotes*(path: string): seq[tuple[name, url: string]] =
     if fields.len >= 3 and fields[2] == "(fetch)":
       result.add((fields[0], fields[1]))
 
+proc thisMachine*(): string =
+  ## This machine's name, as the server lists where a project is checked out.
+  try:
+    result = readFile("/proc/sys/kernel/hostname").strip()
+  except IOError:
+    result = getEnv("HOSTNAME")
+
 proc projectPayload*(project: Project): JsonNode =
   result = %*{"name": project.name}
   if project.namespace.len > 0 and project.namespace != "default":
@@ -119,6 +126,10 @@ proc projectPayload*(project: Project): JsonNode =
     result["language"] = %project.language
   if project.tags.len > 0:
     result["tags"] = %project.tags
+  if project.path.len > 0:
+    let machine = if project.machine.len > 0: project.machine else: thisMachine()
+    if machine.len > 0:
+      result["checkout"] = %*{"machine": machine, "path": project.path}
   if project.machine.len == 0:
     let remotes = gitRemotes(project.path)
     if remotes.len > 0:

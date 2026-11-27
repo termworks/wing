@@ -20,7 +20,9 @@ Once logged in, a project is registered on the server whenever wing adds or chan
 The server reads the checkout's git remotes; a remote on the server's git host brings the
 project's version, commits, issues and builds onto its page.
 
-Removing a project here never removes it on the server: its tasks live there.
+Each registration also says which machine has the project checked out and where, so the
+project's page lists every checkout. Removing a project here never removes it on the server:
+its tasks live there.
 
 ```sh
 wing new rust ~/code/thing --namespace termworks     # template, git, registry, server
