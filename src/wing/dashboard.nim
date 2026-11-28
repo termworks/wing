@@ -1,9 +1,10 @@
 ## Aggregates every store into the sections the TUI renders.
 
-import std/[sequtils, strutils]
+import std/[json, os, sequtils, strutils]
 
 import ./machines/facts
 import ./projects/locate
+import ./server
 import ./storage
 import ./store/machines
 import ./store/projects
@@ -12,6 +13,78 @@ import ./builtins/install
 import ./store/templates
 import ./types
 import ./util
+
+proc taskSection(server: var string; problem: var string): DashboardSection =
+  ## Every project's tasks, open ones first, from the wing server.
+  ## Rows: [project, number, title, state, priority, plan, due, updated].
+  result = DashboardSection(title: "Tasks", headers: @["Project", "#", "Task",
+      "State", "Priority", "Plan", "Due"],
+
+empty: "Not logged in to a wing server. Log in with: wing server login URL")
+  let config = loadServer()
+  if not config.configured:
+    return
+  server = config.host
+  result.empty = "Nothing to do. Add a task with a, or: wing todo add TEXT"
+  var tasks: JsonNode
+  try:
+    {.cast(gcsafe).}:
+      tasks = config.request("GET", "/api/tasks", timeout = 8)
+  except CatchableError as error:
+    problem = error.msg
+    result.empty = config.host & " did not answer: " & error.msg
+    return
+  var rows: seq[seq[string]]
+  for state in ["doing", "todo", "done"]:
+    for t in tasks:
+      if t["state"].getStr() == state:
+        rows.add(@[t["project_name"].getStr(), $t["number"].getInt(), t["title"].getStr(), state,
+                   ["low", "normal", "high"][t["priority"].getInt(1)], t{
+                       "plan_title"}.getStr(),
+                   t{"due"}.getStr(), t["updated"].getStr()])
+  result.rows = rows
+
+proc skillDescription(dir: string): string =
+  ## The description line of a SKILL.md's front matter, enough for a row.
+  try:
+    let lines = readFile(dir / "SKILL.md").splitLines()
+    for i, line in lines:
+      if line.startsWith("description:"):
+        result = line["description:".len .. ^1].strip(chars = {' ', '"', '\'',
+            '>', '|', '-'})
+        # A folded or literal block: the indented lines after it are the description.
+        var j = i + 1
+        while result.len == 0 and j < lines.len and (lines[j].startsWith(" ") or
+            lines[j].len == 0):
+          result.add(lines[j].strip() & " ")
+          inc j
+        while j < lines.len and lines[j].startsWith("  ") and result.len < 300:
+          result.add(" " & lines[j].strip())
+          inc j
+        return result.strip()
+  except IOError:
+    discard
+
+proc skillSection(): DashboardSection =
+  ## Skills pulled from the wing server. Rows: [name, linked agents, description].
+  result = DashboardSection(title: "Skills", headers: @["Name", "Linked",
+      "Description"],
+
+empty: "No skills here yet. Pull them with p, or: wing skill pull")
+  let root = serverSkillsRoot()
+  if not dirExists(root):
+    return
+  let targets = skillTargets()
+  for kind, path in walkDir(root):
+    let name = extractFilename(path)
+    if kind != pcDir or name.startsWith("."):
+      continue
+    var linked: seq[string]
+    for target in targets:
+      if symlinkExists(target / name) and expandSymlink(target / name) == path:
+        linked.add(extractFilename(parentDir(target)).strip(chars = {'.'}))
+    result.rows.add(@[name, $linked.len & "/" & $targets.len & " " &
+        linked.join(" "), skillDescription(path)])
 
 proc loadDashboardData*(): DashboardData =
   let projectPath = ensureProjectsFile()
@@ -104,3 +177,9 @@ proc loadDashboardData*(): DashboardData =
   )
   ]
   )
+  # The wing server's tabs: tasks beside the projects they belong to, skills beside templates.
+  var server, problem: string
+  result.sections.insert(taskSection(server, problem), 1)
+  result.sections.insert(skillSection(), 4)
+  result.server = server
+  result.serverError = problem

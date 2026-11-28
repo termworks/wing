@@ -1,6 +1,6 @@
 ## `wing project` — registry, discovery, and bulk import.
 
-import std/[os, sequtils, strutils]
+import std/[json, os, sequtils, strutils]
 
 import ../cliargs
 import ../projects/locate
@@ -11,7 +11,49 @@ import ../jsonfmt
 import ../server
 import ../store/projects
 import ../types
+import ../ui
 import ../util
+
+proc printServerSide(name: string) =
+  ## What the wing server knows about a project, under what this machine does: the forge's
+  ## version and build, its remotes and checkouts, and its open tasks.
+  let config = loadServer()
+  if not config.configured:
+    return
+  var p: JsonNode
+  try:
+    p = serverProject(name)
+  except ServerError:
+    echo ""
+    echo mute("Not registered on " & config.host & " (wing server sync)")
+    return
+  echo ""
+  echo heading("On " & config.host, p{"namespace"}.getStr())
+  var open, doing = 0
+  for task in p{"tasks"}:
+    case task["state"].getStr()
+    of "todo": inc open
+    of "doing": inc doing
+    else: discard
+  var planNames: seq[string]
+  for plan in p{"plans"}:
+    if plan["state"].getStr() == "open":
+      planNames.add(plan["title"].getStr())
+  let taskText = if open + doing == 0: "" else: "$1 open · $2 doing" % [$(
+      open + doing), $doing]
+  let issueText = if p{"gitea"}.getStr().len == 0: "" else:
+    "$1 open · $2 pulls" % [$p{"issues"}.getInt(), $p{"pulls"}.getInt()]
+  var rows = @[("version", p{"version"}.getStr()), ("build", buildBadge(p{"build"}.getStr())),
+               ("pushed", ago(p{"pushed"}.getStr())), ("tasks", taskText),
+               ("plans", planNames.join(", ")), ("issues", issueText)]
+  for remote in p{"remotes"}:
+    rows.add(("remote", "$1  $2" % [remote["name"].getStr(), info(remote[
+        "url"].getStr())]))
+  for machine, checkout in p{"checkouts"}:
+    rows.add(("on", "$1  $2  $3" % [machine, checkout["path"].getStr(), mute(
+        ago(checkout["seen"].getStr()))]))
+  rows.add(("page", info(config.url & "/p/" & enc(name))))
+  echo facts(rows)
 
 proc showProjectHelp() =
   echo """
@@ -205,6 +247,7 @@ proc handleProject*(argsIn: seq[string]) =
             0: "None" else: project.tags.join(", "))
         echo "Created: " & displayStamp(project.createdAt)
         echo "Updated: " & displayStamp(project.updatedAt)
+        printServerSide(project.name)
         return
     die("Project '" & args[0] & "' not found in namespace '" & namespace & "'")
   of "remove", "rm", "delete", "del":

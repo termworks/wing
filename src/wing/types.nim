@@ -89,3 +89,5 @@ type
   DashboardData* = object
     dataDir*: string
     sections*: seq[DashboardSection]
+    server*: string # the wing server's host, empty when not logged in to one
+    serverError*: string # why it could not be asked, when it could not

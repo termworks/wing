@@ -6,6 +6,7 @@ import ../apply
 import ../builtins/paths
 import ../builtins/registry
 import ../server
+import ./bundles
 import ./plugin
 import ../builtins/flavours
 import ../builtins/install
@@ -14,30 +15,46 @@ import ../cliargs
 import ../jsonfmt
 import ../store/templates
 import ../types
+import ../ui
 import ../util
 
+const TemplateKind = BundleKind(plural: "templates", noun: "template",
+             manifest: "template.lua", starter: "local wing = require(\"wing\")\n\nwing.template(\"$name\", {\n  description = \"$description\",\n" &
+             "  language = \"\",\n  tags = { },\n})\n")
+
 proc showTemplateHelp() =
-  echo """
+  echo heading("wing template", "what projects are made from") & """
+
+
 Usage: wing template <COMMAND>
 
-Commands:
-  add NAME --description DESC --path PATH [options]
-  list [--raw]
+On the wing server (where templates are edited):
+  remote                      every template there
+  files NAME                  a template's files
+  new NAME [DESCRIPTION...]   make one, starting with a template.lua
+  edit NAME [FILE]            one of its files in $EDITOR (default template.lua), saved back
+  delete NAME [--yes]         remove it there, for every machine
+  pull [--force]              mirror them here (also done every 10 minutes)
+  push NAME [DIR]             upload a template folder
+  push --all [ROOT]           upload every template folder under ROOT (default: config/templates)
+
+Using them:
+  list [--raw]                every template wing can apply here
   info NAME
+  apply TEMPLATE TARGET_PATH [--name PROJECT_NAME] [--flavour FLAVOUR] [--dry-run] [--force|--skip-existing] [--allow-symlinks]
+
+The local registry:
+  add NAME --description DESC --path PATH [options]
   set NAME [options]
   rename OLD NEW
   tag add NAME TAG
   tag remove NAME TAG
-  apply TEMPLATE TARGET_PATH [--name PROJECT_NAME] [--flavour FLAVOUR] [--dry-run] [--force|--skip-existing] [--allow-symlinks]
   builtins [list|install] [--force]
   install SOURCE [--yes]      a path, or github:user/repo@rev
   installed                   what was installed, and whether its code changed
   allow NAME                  agree to an installed template's current contents
   uninstall NAME
   remove NAME
-  pull [--force]              mirror the wing server's templates (also done every 10 minutes)
-  push NAME [DIR]             upload a template folder to the wing server
-  push --all [ROOT]           upload every template folder under ROOT (default: config/templates)
 
 Python flavours:
   nix (default), uv, pixi, micromamba
@@ -54,6 +71,12 @@ proc handleTemplate*(argsIn: seq[string]) =
     return
   let command = args[0]
   args.delete(0)
+  if command in ["remote", "server", "files", "new", "create", "edit", "delete"]:
+    let yes = popFlag(args, ["-y", "--yes"])
+    rejectUnknownOptions(args)
+    discard bundleCommand(TemplateKind, if command ==
+        "files": "show" else: command, args, yes)
+    return
   if command notin ["pull", "push"]:
     pullIfStale()
   let path = ensureTemplatesFile()
@@ -65,8 +88,9 @@ proc handleTemplate*(argsIn: seq[string]) =
     rejectUnknownOptions(args)
     try:
       let pulled = pullTemplates(force)
-      echo "Templates from $1: $2 updated, $3 unchanged, $4 removed" % [
-          loadServer().host, $pulled.changed, $pulled.kept, $pulled.removed]
+      success("Templates from $1: $2 updated, $3 unchanged, $4 removed" % [
+          accent(loadServer().host), $pulled.changed, $pulled.kept,
+              $pulled.removed])
     except ServerError as error:
       die(error.msg)
   of "push", "upload":
@@ -81,9 +105,9 @@ proc handleTemplate*(argsIn: seq[string]) =
         for kind, dir in walkDir(root):
           if kind == pcDir and not extractFilename(dir).startsWith("."):
             discard pushTemplate(extractFilename(dir), dir)
-            echo "Pushed " & extractFilename(dir)
+            echo "  " & mute("↑ ") & extractFilename(dir)
             inc pushed
-        echo $pushed & " templates pushed to " & loadServer().host
+        success($pushed & " templates pushed to " & accent(loadServer().host))
       else:
         requireArgs(args, 1, "wing template push NAME [DIR]")
         let name = args[0]
@@ -97,8 +121,8 @@ proc handleTemplate*(argsIn: seq[string]) =
           die("No folder for template '" & name &
               "'; name it: wing template push " & name & " DIR", 2)
         let answer = pushTemplate(name, dir)
-        echo "Pushed " & name & " from " & dir & " (" & answer{"hash"}.getStr()[
-            0 ..< 8] & ")"
+        success("Pushed " & accent(name) & mute("  from " & dir & " · " &
+            answer{"hash"}.getStr()[0 ..< 8]))
     except ServerError as error:
       die(error.msg)
   of "builtins", "builtin", "defaults":
@@ -121,7 +145,7 @@ proc handleTemplate*(argsIn: seq[string]) =
       installBuiltinTemplates(path, templates, force)
     else:
       die("Unknown builtin template action: " & action, 2)
-  of "add", "a", "new":
+  of "add", "a":
     let description = popValue(args, ["-d", "--description", "--desc"])
     let templatePath = popValue(args, ["-p", "--path"])
     let language = popValue(args, ["-l", "--language"])
@@ -193,7 +217,7 @@ proc handleTemplate*(argsIn: seq[string]) =
         echo "Updated: " & displayStamp(tmpl.updatedAt)
         return
     die("Template '" & name & "' not found")
-  of "set", "edit":
+  of "set":
     let description = popValue(args, ["-d", "--description", "--desc"])
     let templatePath = popValue(args, ["-p", "--path"])
     let language = popValue(args, ["-l", "--language"])

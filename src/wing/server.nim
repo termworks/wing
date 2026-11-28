@@ -186,6 +186,32 @@ proc readPullState(plural: string): JsonNode =
   except CatchableError:
     result = %*{"pulled": 0, "hashes": {}}
 
+proc writeBundle*(full: JsonNode; dir: string) =
+  ## A template or skill as the API sends it, written out as the folder it is.
+  removeDir(dir)
+  createDir(dir)
+  for file in full["files"]:
+    let rel = file["path"].getStr()
+    if rel.len == 0 or rel.startsWith("/") or ".." in rel.split('/'):
+      continue
+    let target = dir / rel
+    createDir(parentDir(target))
+    writeFile(target, base64.decode(file["data"].getStr()))
+    let mode = file{"mode"}.getInt(0o644)
+    var perms = {fpUserRead, fpUserWrite, fpGroupRead, fpOthersRead}
+    if (mode and 0o111) != 0:
+      perms.incl({fpUserExec, fpGroupExec, fpOthersExec})
+    setFilePermissions(target, perms)
+
+proc getBundle*(plural, name: string): JsonNode =
+  api("/" & plural & "/" & enc(name))
+
+proc listBundles*(plural: string): JsonNode =
+  api("/" & plural)
+
+proc deleteBundle*(plural, name: string) =
+  discard api("/" & plural & "/" & enc(name), "DELETE")
+
 proc pullBundles*(plural: string; force = false): tuple[changed, removed, kept: int] =
   ## Mirror the server's templates or skills: fetch what changed, drop what the server no longer
   ## has. Each one is written beside its old copy and swapped in whole.
@@ -210,20 +236,7 @@ proc pullBundles*(plural: string; force = false): tuple[changed, removed, kept: 
       continue
     let full = config.request("GET", "/api/" & plural & "/" & enc(name))
     let staging = root / ("." & name & ".new")
-    removeDir(staging)
-    createDir(staging)
-    for file in full["files"]:
-      let rel = file["path"].getStr()
-      if rel.len == 0 or rel.startsWith("/") or ".." in rel.split('/'):
-        continue
-      let target = staging / rel
-      createDir(parentDir(target))
-      writeFile(target, base64.decode(file["data"].getStr()))
-      let mode = file{"mode"}.getInt(0o644)
-      var perms = {fpUserRead, fpUserWrite, fpGroupRead, fpOthersRead}
-      if (mode and 0o111) != 0:
-        perms.incl({fpUserExec, fpGroupExec, fpOthersExec})
-      setFilePermissions(target, perms)
+    writeBundle(full, staging)
     removeDir(root / name)
     moveDir(staging, root / name)
     inc result.changed
