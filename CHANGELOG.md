@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.10.0] - 2026-11-28
+
+### <!-- 0 -->⛰️  Features
+
+- Docs, rules, search, issues and repos from the cli
+
 ## [0.9.0] - 2026-11-28
 
 ### <!-- 0 -->⛰️  Features

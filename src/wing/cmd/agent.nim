@@ -15,21 +15,16 @@ const AgentKind = BundleKind(plural: "agents", noun: "agent",
              "  deny: [bash(rm *), bash(git push*)]\ndefault: ask\n---\n\n" &
              "You are $name. Say what you are for, how you work, and what you never do.\n")
 
-const ToolHomes = [("claude", ".claude"), ("opencode", ".config/opencode"), (
-    "gemini", ".gemini"), ("codex", ".codex")]
 const ToolNames = [("claude", "Claude Code"), ("opencode", "OpenCode"), (
     "gemini", "Gemini CLI"), ("codex", "Codex")]
 
-proc toolName(target: string): string =
+proc toolName*(target: string): string =
   for (key, name) in ToolNames:
     if key == target: return name
   target
 
 proc installed*(target: string): bool =
-  ## A tool is here when its own folder is: wing writes for tools you have, and makes none.
-  for (key, dir) in ToolHomes:
-    if key == target:
-      return dirExists(getHomeDir() / dir)
+  toolInstalled(target)
 
 proc statePath(): string =
   dataRoot() / "server" / "agents.json"

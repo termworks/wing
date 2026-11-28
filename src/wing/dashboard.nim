@@ -65,6 +65,30 @@ proc skillDescription(dir: string): string =
   except IOError:
     discard
 
+proc docSection(): DashboardSection =
+  ## Every project's docs on the wing server. Rows: [project, path, size, updated].
+  result = DashboardSection(title: "Docs", headers: @["Project", "File", "Size",
+      "Updated"],
+
+empty: "No docs yet. Write some on a project's Docs tab, or: wing doc edit notes.md")
+  let config = loadServer()
+  if not config.configured:
+    result.empty = "Not logged in to a wing server. Log in with: wing server login URL"
+    return
+  try:
+    {.cast(gcsafe).}:
+      for bundle in config.request("GET", "/api/docs", timeout = 8):
+        let project = bundle["name"].getStr()
+        let full = config.request("GET", "/api/docs/" & enc(project) &
+            "?meta=1", timeout = 8)
+        for f in full["files"]:
+          let path = f["path"].getStr()
+          if not path.endsWith(".keep"):
+            result.rows.add(@[project, path, $f{"size"}.getInt(), full{
+                "updated"}.getStr()])
+  except CatchableError as error:
+    result.empty = config.host & " did not answer: " & error.msg
+
 proc agentSection(): DashboardSection =
   ## Agents written here by `wing agent pull`. Rows: [name, tools written for, description, notes].
   result = DashboardSection(title: "Agents", headers: @["Name", "Tools", "Role",
@@ -196,7 +220,8 @@ proc loadDashboardData*(): DashboardData =
   # The wing server's tabs: tasks beside the projects they belong to, skills beside templates.
   var server, problem: string
   result.sections.insert(taskSection(server, problem), 1)
-  result.sections.insert(agentSection(), 4)
-  result.sections.insert(skillSection(), 5)
+  result.sections.insert(docSection(), 2)
+  result.sections.insert(agentSection(), 5)
+  result.sections.insert(skillSection(), 6)
   result.server = server
   result.serverError = problem
