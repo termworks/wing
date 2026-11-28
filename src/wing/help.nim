@@ -22,6 +22,7 @@ proc showHelp*() =
   echo command("plan", "pl", "the current project's plans, and how far along they are")
   echo command("project", "p", "this machine's projects: add, clone, adopt, discover, info")
   echo command("template", "t", "what projects are made from, edited on the server")
+  echo command("agent", "ag", "coding-agent profiles: role, skills, allowed and banned tools")
   echo command("skill", "sk", "agent skills from the server, linked into every agent")
   echo command("server", "", "log in, list the server's projects, import from git")
   echo command("status", "st", "what is uncommitted or unpushed, everywhere")
@@ -52,6 +53,7 @@ proc commandReferenceMarkdown*(): string =
 - `wing todo ...` — the current project's tasks, kept on the wing server.
 - `wing plan ...` — the current project's plans, kept on the wing server.
 - `wing skill ...` — agent skills from the wing server, linked into Claude, Codex and ~/.agents.
+- `wing agent ...` — coding-agent profiles from the wing server, written for Claude Code, OpenCode, Gemini CLI and Codex.
 - `wing project ...` — manage projects, discovery, import, JSON listing.
 - `wing machine ...` — manage SSH hosts, SSH config, health checks.
 - `wing template ...` — manage and safely apply project templates.

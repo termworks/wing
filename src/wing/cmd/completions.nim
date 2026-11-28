@@ -9,7 +9,7 @@ proc handleCompletions*(argsIn: seq[string]) =
   var args = argsIn
   rejectUnknownOptions(args)
   requireArgs(args, 1, "wing completions bash|zsh|fish")
-  let commands = "new todo plan skill server project machine template env sync init data completions tui help"
+  let commands = "new todo plan agent skill server project machine template env sync init data completions tui help"
   case args[0]
   of "bash":
     echo "complete -W '" & commands & "' wing"

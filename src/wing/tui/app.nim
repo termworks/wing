@@ -21,13 +21,13 @@ Options:
   --command COMMAND  Run a wing command through the TUI command runner
   -h, --help         Print help information
 
-Tabs: Projects, Tasks, Machines, Templates, Skills, Sync. Tasks and Skills come from the
+Tabs: Projects, Tasks, Machines, Templates, Agents, Skills, Sync. Tasks, Agents and Skills come from the
 wing server (wing server login URL).
 
 Keys:
   Left/Right, h/l, Tab, 1-6   Switch tabs
   s / x / o                   On Tasks: start, done, reopen the selected task
-  p                           On Skills: pull from the wing server and link them
+  p                           On Agents and Skills: pull from the wing server
   Up/Down, j/k                Move selection
   PageUp/PageDown             Move faster
   /                           Filter current view
@@ -111,6 +111,9 @@ proc startAddForm*(m: WingApp; section: DashboardSection) =
   of "Skills":
     m.showOverlay("Add a skill",
         "Make one on the wing server's Skills tab, or:\n  wing skill new NAME DESCRIPTION\n  wing skill edit NAME\nthen p to pull it here.")
+  of "Agents":
+    m.showOverlay("Add an agent",
+        "Make one on the wing server's Agents tab (its form sets the role, model, skills\nand tool rules), or:\n  wing agent new NAME ROLE\n  wing agent edit NAME\nthen p to write it for every coding tool here.")
   of "Sync":
     m.showOverlay("Add sync target",
         "Use the CLI — sync targets need several fields:\n  wing sync add NAME --project P --machine M --remote PATH")
@@ -336,8 +339,9 @@ method update(m: WingApp; msg: Msg): (Model, Cmd) =
         m.runQuietly(taskCommand(currentSection(m.data, m.state), selectedRow(
             m.data, m.state), action))
       elif key.matchString("p", "P") and currentSection(m.data,
-          m.state).title == "Skills":
-        m.runQuietly("skill pull")
+          m.state).title in ["Skills", "Agents"]:
+        let title = currentSection(m.data, m.state).title
+        m.runQuietly(if title == "Skills": "skill pull" else: "agent pull")
       elif key.matchString("s", "S"):
         # The TUI cannot hand its terminal to ssh, so this shows the command instead of pretending
         # to run it -- copyable, and honest about which machine it would reach.

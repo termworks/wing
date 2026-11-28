@@ -65,6 +65,22 @@ proc skillDescription(dir: string): string =
   except IOError:
     discard
 
+proc agentSection(): DashboardSection =
+  ## Agents written here by `wing agent pull`. Rows: [name, tools written for, description, notes].
+  result = DashboardSection(title: "Agents", headers: @["Name", "Tools", "Role",
+      "Notes"],
+
+empty: "No agents here yet. Pull them with p, or: wing agent pull")
+  var state: JsonNode
+  try:
+    state = parseFile(dataRoot() / "server" / "agents.json")
+  except CatchableError:
+    return
+  for name, agent in state{"agents"}:
+    let targets = agent{"targets"}.getElems().mapIt(it.getStr())
+    result.rows.add(@[name, targets.join(" "), agent{"description"}.getStr(),
+        $agent{"notes"}.getInt()])
+
 proc skillSection(): DashboardSection =
   ## Skills pulled from the wing server. Rows: [name, linked agents, description].
   result = DashboardSection(title: "Skills", headers: @["Name", "Linked",
@@ -180,6 +196,7 @@ proc loadDashboardData*(): DashboardData =
   # The wing server's tabs: tasks beside the projects they belong to, skills beside templates.
   var server, problem: string
   result.sections.insert(taskSection(server, problem), 1)
-  result.sections.insert(skillSection(), 4)
+  result.sections.insert(agentSection(), 4)
+  result.sections.insert(skillSection(), 5)
   result.server = server
   result.serverError = problem

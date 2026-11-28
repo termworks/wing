@@ -36,6 +36,7 @@ proc titleColor*(title: string): Color =
   of "Machines": cTag
   of "Templates": cOk
   of "Skills": cOk
+  of "Agents": cPrimary
   of "Sync": cTag
   else: cPrimary
 
@@ -46,6 +47,7 @@ proc sectionIcon*(title: string): string =
   of "Machines": "●"
   of "Templates": "◇"
   of "Skills": "✦"
+  of "Agents": "☺"
   of "Sync": "⇄"
   else: "•"
 
@@ -96,6 +98,17 @@ proc rowParts*(section: DashboardSection; row: seq[string]): tuple[
     result.right = if row.len > 3: dash(row[3]) else: "—"
     result.meta = if row.len > 1: dash(row[1]) else: "—"
     result.desc = if row.len > 2: dash(row[2]) else: "—"
+  of "Agents":
+    # [name, tools written for, role, notes]
+    let tools = if row.len > 1: row[1].splitWhitespace() else: @[]
+    result.right = $tools.len & (if tools.len == 1: " tool" else: " tools")
+    result.meta = if row.len > 2: dash(row[2]) else: "—"
+    var written = "no coding tool installed here"
+    if tools.len > 0:
+      written = "written for " & tools.join(", ")
+    if row.len > 3 and row[3] != "0":
+      written.add("  ·  " & row[3] & " notes")
+    result.desc = written
   of "Skills":
     # [name, linked, description]
     let linked = if row.len > 1: row[1] else: ""
@@ -196,6 +209,7 @@ proc keysFor*(title: string): string =
   let own = case title
     of "Tasks": "a add · s start · x done · o reopen · d delete · enter show"
     of "Skills": "p pull · enter files · d delete on server"
+    of "Agents": "p pull · enter files · d delete on server"
     of "Projects": "a add · s where · d delete · enter details"
     of "Machines": "a add · s ssh · d delete · enter details"
     of "Templates": "a add · d delete · enter details"
@@ -330,7 +344,7 @@ proc renderSnapshot*(data: DashboardData): string =
 proc helpText*(): string =
   """
 Navigation:
-  ←/→ or h/l, Tab     switch tabs (or 1-6)
+  ←/→ or h/l, Tab     switch tabs (or 1-7)
   ↑/↓ or j/k          move; PgUp/PgDn move faster
 
 Everywhere:
@@ -346,6 +360,6 @@ Everywhere:
 Tasks:
   s start · x done · o reopen
 
-Skills:
+Agents and Skills:
   p pull from the wing server and link into every agent
 """
