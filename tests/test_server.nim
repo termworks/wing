@@ -71,6 +71,25 @@ block environmentWins:
   putEnv("WING_SERVER", "")
   putEnv("WING_TOKEN", "")
 
+block toolsByFolderOrProgram:
+  # A coding tool is installed when its folder is there, or one of its programs is on PATH.
+  let savedHome = getEnv("HOME")
+  let savedPath = getEnv("PATH")
+  let home = scratch / "toolhome"
+  let bin = scratch / "toolbin"
+  createDir(home / ".gemini")
+  createDir(bin)
+  writeFile(bin / "opencode2", "#!/bin/sh\n")
+  setFilePermissions(bin / "opencode2", {fpUserRead, fpUserWrite, fpUserExec})
+  putEnv("HOME", home)
+  putEnv("PATH", bin)
+  doAssert toolInstalled("gemini"), "by its folder"
+  doAssert toolInstalled("opencode"), "by its program, under either name"
+  doAssert not toolInstalled("codex")
+  doAssert toolHome("opencode") == home / ".config/opencode"
+  putEnv("HOME", savedHome)
+  putEnv("PATH", savedPath)
+
 block skillLinks:
   # Pulled skills are linked into every agent folder: an older tool's link is taken over, a real
   # folder is left alone, and a link to a skill the server dropped goes.

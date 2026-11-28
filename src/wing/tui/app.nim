@@ -21,7 +21,7 @@ Options:
   --command COMMAND  Run a wing command through the TUI command runner
   -h, --help         Print help information
 
-Tabs: Projects, Tasks, Machines, Templates, Agents, Skills, Sync. Tasks, Agents and Skills come from the
+Tabs: Projects, Tasks, Docs, Machines, Templates, Agents, Skills, Sync. Tasks, Docs, Agents and Skills come from the
 wing server (wing server login URL).
 
 Keys:
@@ -111,6 +111,9 @@ proc startAddForm*(m: WingApp; section: DashboardSection) =
   of "Skills":
     m.showOverlay("Add a skill",
         "Make one on the wing server's Skills tab, or:\n  wing skill new NAME DESCRIPTION\n  wing skill edit NAME\nthen p to pull it here.")
+  of "Docs":
+    m.showOverlay("Add a doc",
+        "Write one on a project's Docs tab on the wing server, or in a project:\n  wing doc edit notes.md\n  wing doc add ./design.png")
   of "Agents":
     m.showOverlay("Add an agent",
         "Make one on the wing server's Agents tab (its form sets the role, model, skills\nand tool rules), or:\n  wing agent new NAME ROLE\n  wing agent edit NAME\nthen p to write it for every coding tool here.")

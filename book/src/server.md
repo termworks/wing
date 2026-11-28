@@ -11,7 +11,12 @@ wing server sync          # register every project this machine knows
 ```
 
 The token is kept in `$XDG_DATA_HOME/wing/server.json`, readable by you only. `WING_SERVER` and
-`WING_TOKEN` override it. Requests go through `curl`.
+`WING_TOKEN` override it. Requests go through `curl`, and say which machine they come from, so the
+settings page shows where each token was last used. A token can be read-only, and can expire.
+
+```sh
+wing search zebrafish     # projects, tasks, plans, and every file of docs, rules, agents, skills, templates
+```
 
 ## Projects
 
@@ -26,6 +31,22 @@ its tasks live there.
 
 ```sh
 wing new rust ~/code/thing --namespace termworks     # template, git, registry, server
+wing new rust ~/code/thing --repo --owner termworks  # and its repository on git, as origin
+```
+
+`--repo` needs a token from the git host, with write access, on the server's settings page.
+
+## Docs
+
+Each project has docs on the server: a README, notes, designs, pictures, edited in the browser
+(markdown with a live preview) or from here.
+
+```sh
+wing doc                           # the current project's files
+wing doc edit notes/design.md      # in $EDITOR; a new path makes a new file
+wing doc add ./diagram.png
+wing doc show notes/design.md
+wing doc rm notes                  # a folder, and what is in it
 ```
 
 ## Tasks and plans
@@ -47,6 +68,10 @@ wing plan close 1
 
 In a task's text, `+PLAN` puts it in a plan (its number, or a one-word title), and `!high` or
 `!low` sets its priority.
+
+A task can follow an issue on the git host: `wing todo edit 4 --issue 12`. Marking it done closes
+the issue; reopening it opens the issue again. `wing todo import` makes a task of every open issue
+that no task follows yet.
 
 ## Templates
 
@@ -103,7 +128,7 @@ You review changes. ...
 ```
 
 Rules are `read`, `grep`, `glob`, `edit`, `write`, `bash`, `bash(PATTERN)`, `web.search`,
-`web.fetch`, `task`, `mcp(SERVER)` and `mcp(SERVER/TOOL)`. Deny wins over ask, ask over allow.
+`web.fetch` and `task`. Deny wins over ask, ask over allow.
 
 ```sh
 wing agent pull [--notes]          # write every agent for each coding tool installed here
@@ -116,3 +141,21 @@ wing agent edit NAME
 Where a tool cannot express a rule, the agent gets the stricter reading, never the looser one,
 and `--notes` says what was left out. A file wing did not write is never touched; files of an
 agent deleted on the server are removed.
+
+## Rules
+
+Rules are the standing instructions agents read: one set for everywhere, and one per project,
+edited in the server's Rules tab (and each project's).
+
+```sh
+wing rules                         # the global rules
+wing rules edit                    # in $EDITOR; `wing rules edit PROJECT` for a project's
+wing rules push global ~/.claude/CLAUDE.md   # make a file of yours the rules
+wing rules pull                    # write them here (the hourly sync does it too)
+```
+
+The global rules go to each coding tool installed here, in the file that tool reads. A project's
+rules go into its checkout as `AGENTS.md`, and only when the project has rules written, or agents
+chosen in its settings; those agents are named in it, each with its role. Nothing else is ever
+written into a checkout. A file wing did not write, with other words in it, is left alone: push
+it first to make it the rules.

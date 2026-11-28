@@ -55,6 +55,9 @@ proc infoCommand*(section: DashboardSection; row: seq[string]): string =
     "skill show " & quoteShell(row[0])
   of "Agents":
     "agent show " & quoteShell(row[0])
+  of "Docs":
+    if row.len < 2: "" else: "doc show " & quoteShell(row[1]) & " --project " &
+        quoteShell(row[0])
   of "Sync":
     "sync info " & quoteShell(row[0])
   else:
@@ -83,6 +86,9 @@ proc deleteCommand*(section: DashboardSection; row: seq[string]): string =
     "skill delete " & quoteShell(row[0]) & " --yes"
   of "Agents":
     "agent delete " & quoteShell(row[0]) & " --yes"
+  of "Docs":
+    if row.len < 2: "" else: "doc rm " & quoteShell(row[1]) & " --project " &
+        quoteShell(row[0])
   of "Sync":
     "sync remove " & quoteShell(row[0])
   else:

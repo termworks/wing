@@ -19,6 +19,9 @@ import ./cmd/new
 import ./cmd/project
 import ./cmd/server
 import ./cmd/agent
+import ./cmd/doc
+import ./cmd/rules
+import ./cmd/search
 import ./cmd/skill
 import ./cmd/sync
 import "./cmd/template"
@@ -53,6 +56,12 @@ proc main*() =
     handleTodo(args)
   of "plan", "pl", "plans":
     handlePlan(args)
+  of "doc", "docs":
+    handleDoc(args)
+  of "rules", "rule":
+    handleRules(args)
+  of "search", "find", "/":
+    handleSearch(args)
   of "agent", "ag", "agents":
     handleAgent(args)
   of "skill", "sk", "skills":

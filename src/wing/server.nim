@@ -49,13 +49,44 @@ proc host*(config: ServerConfig): string =
 proc quoteConfig(value: string): string =
   "\"" & value.replace("\\", "\\\\").replace("\"", "\\\"") & "\""
 
+proc thisMachine*(): string =
+  ## This machine's name, as the server lists where a project is checked out and which machine
+  ## last used a token.
+  try:
+    result = readFile("/proc/sys/kernel/hostname").strip()
+  except IOError:
+    result = getEnv("HOSTNAME")
+
+# The coding tools wing writes agents and rules for: where each keeps its files, and the
+# programs that mean it is installed.
+const ToolHomes* = [("claude", ".claude"), ("opencode", ".config/opencode"),
+    ("gemini", ".gemini"), ("codex", ".codex")]
+const ToolPrograms = [("claude", "claude"), ("opencode", "opencode opencode2"),
+    ("gemini", "gemini"), ("codex", "codex")]
+
+proc toolHome*(target: string): string =
+  for (key, dir) in ToolHomes:
+    if key == target:
+      return getHomeDir() / dir
+
+proc toolInstalled*(target: string): bool =
+  ## Its folder is there, or one of its programs is on PATH: wing writes for tools you have.
+  if toolHome(target).len > 0 and dirExists(toolHome(target)):
+    return true
+  for (key, programs) in ToolPrograms:
+    if key == target:
+      for program in programs.splitWhitespace():
+        if findExe(program).len > 0:
+          return true
+
 proc request*(config: ServerConfig; meth, path: string; body: JsonNode = nil;
     timeout = 30): JsonNode =
   ## One call to the server's API. The token goes to curl on stdin, so it is never in argv.
   if not config.configured:
     raise newException(ServerError, "not logged in to a wing server; run `wing server login URL --token TOKEN`")
   var args = @["-sS", "-X", meth, "--max-time", $timeout, "-K", "-", "-w", "\n%{http_code}",
-               "-H", "Accept: application/json"]
+               "-H", "Accept: application/json", "-H", "X-Wing-Machine: " &
+               thisMachine()]
   var bodyFile = ""
   if body != nil:
     bodyFile = getTempDir() / ("wing-request-" & $getCurrentProcessId() & ".json")
@@ -112,13 +143,6 @@ proc gitRemotes*(path: string): seq[tuple[name, url: string]] =
     let fields = line.splitWhitespace()
     if fields.len >= 3 and fields[2] == "(fetch)":
       result.add((fields[0], fields[1]))
-
-proc thisMachine*(): string =
-  ## This machine's name, as the server lists where a project is checked out.
-  try:
-    result = readFile("/proc/sys/kernel/hostname").strip()
-  except IOError:
-    result = getEnv("HOSTNAME")
 
 proc projectPayload*(project: Project): JsonNode =
   result = %*{"name": project.name}

@@ -78,6 +78,8 @@ proc taskLine*(task: JsonNode; withProject = false): string =
     extra.add(accent("@" & task["project_name"].getStr()))
   if task{"plan_title"}.getStr().len > 0:
     extra.add(info("+" & task["plan_title"].getStr()))
+  if task{"issue"}.getInt() > 0:
+    extra.add(mute("issue #" & $task["issue"].getInt()))
   let due = dueNote(task{"due"}.getStr(), state)
   if due.len > 0:
     extra.add(due)
@@ -135,6 +137,8 @@ Commands:
   show N                      everything about one task
   note N                      write its notes in $EDITOR
   edit N [--title T] [--notes N] [--priority high|normal|low] [--due YYYY-MM-DD|none] [--plan P|none]
+         [--issue N|none]     link an issue on git: done closes it, reopen opens it
+  import                      every open issue of the project's repository, as a task
   rm N...
 
 The project is the one the current directory is in, unless --project or WING_PROJECT says.
@@ -254,8 +258,10 @@ proc handleTodo*(argsIn: seq[string]) =
       let priority = popValue(args, ["--priority"])
       let due = popValue(args, ["--due"])
       let planName = popValue(args, ["--plan"])
+      let issue = popValue(args, ["--issue"])
       rejectUnknownOptions(args)
-      requireArgs(args, 1, "wing todo edit N [--title T] [--notes N] [--priority P] [--due D] [--plan P]")
+      requireArgs(args, 1, "wing todo edit N [--title T] [--notes N] [--priority P] [--due D] [--plan P] [--issue N]")
+      if issue.len > 0: fields["issue"] = %(if issue == "none": "0" else: issue)
       if title.len > 0: fields["title"] = %title
       if notes.len > 0: fields["notes"] = %notes
       if priority.len > 0: fields["priority"] = %priorityValue(priority)
@@ -265,6 +271,15 @@ proc handleTodo*(argsIn: seq[string]) =
       if fields.len == 0:
         die("Nothing to change", 2)
       echo taskLine(changeTask(project, number(args[0]), fields))
+    of "import":
+      let project = currentProject(args)
+      rejectUnknownOptions(args)
+      let made = api("/projects/" & enc(project) & "/import-issues", "POST",
+          newJObject())["imported"]
+      if made.len == 0:
+        notice("Every open issue of " & project & " already has a task")
+      else:
+        success($made.len & " issues of " & accent(project) & " are tasks now")
     of "rm", "remove", "delete", "del":
       let project = currentProject(args)
       rejectUnknownOptions(args)

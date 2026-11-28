@@ -37,6 +37,7 @@ proc titleColor*(title: string): Color =
   of "Templates": cOk
   of "Skills": cOk
   of "Agents": cPrimary
+  of "Docs": cTag
   of "Sync": cTag
   else: cPrimary
 
@@ -48,6 +49,7 @@ proc sectionIcon*(title: string): string =
   of "Templates": "◇"
   of "Skills": "✦"
   of "Agents": "☺"
+  of "Docs": "▤"
   of "Sync": "⇄"
   else: "•"
 
@@ -98,6 +100,14 @@ proc rowParts*(section: DashboardSection; row: seq[string]): tuple[
     result.right = if row.len > 3: dash(row[3]) else: "—"
     result.meta = if row.len > 1: dash(row[1]) else: "—"
     result.desc = if row.len > 2: dash(row[2]) else: "—"
+  of "Docs":
+    # [project, path, size, updated]
+    if row.len < 4:
+      return
+    result.name = row[1]
+    result.right = row[2] & " B"
+    result.meta = "@" & row[0]
+    result.desc = "docs updated " & ago(row[3])
   of "Agents":
     # [name, tools written for, role, notes]
     let tools = if row.len > 1: row[1].splitWhitespace() else: @[]
@@ -210,6 +220,7 @@ proc keysFor*(title: string): string =
     of "Tasks": "a add · s start · x done · o reopen · d delete · enter show"
     of "Skills": "p pull · enter files · d delete on server"
     of "Agents": "p pull · enter files · d delete on server"
+    of "Docs": "enter show · d delete on server"
     of "Projects": "a add · s where · d delete · enter details"
     of "Machines": "a add · s ssh · d delete · enter details"
     of "Templates": "a add · d delete · enter details"
@@ -344,7 +355,7 @@ proc renderSnapshot*(data: DashboardData): string =
 proc helpText*(): string =
   """
 Navigation:
-  ←/→ or h/l, Tab     switch tabs (or 1-7)
+  ←/→ or h/l, Tab     switch tabs (or 1-8)
   ↑/↓ or j/k          move; PgUp/PgDn move faster
 
 Everywhere:
