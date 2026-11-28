@@ -296,7 +296,10 @@ wing server status
 wing server sync          # register every project this machine knows
 </code></pre>
 <p>The token is kept in <code>$XDG_DATA_HOME/wing/server.json</code>, readable by you only. <code>WING_SERVER</code> and
-<code>WING_TOKEN</code> override it. Requests go through <code>curl</code>.</p>
+<code>WING_TOKEN</code> override it. Requests go through <code>curl</code>, and say which machine they come from, so the
+settings page shows where each token was last used. A token can be read-only, and can expire.</p>
+<pre><code class="language-sh">wing search zebrafish     # projects, tasks, plans, and every file of docs, rules, agents, skills, templates
+</code></pre>
 <h2 id="projects-1"><a class="header" href="#projects-1">Projects</a></h2>
 <p>Once logged in, a project is registered on the server whenever wing adds or changes one here:
 <code>wing new</code>, <code>project add</code>, <code>clone</code>, <code>adopt</code>, <code>import</code>, <code>discover --register</code>, <code>set</code> and <code>tag</code>.
@@ -306,6 +309,17 @@ project's version, commits, issues and builds onto its page.</p>
 project's page lists every checkout. Removing a project here never removes it on the server:
 its tasks live there.</p>
 <pre><code class="language-sh">wing new rust ~/code/thing --namespace termworks     # template, git, registry, server
+wing new rust ~/code/thing --repo --owner termworks  # and its repository on git, as origin
+</code></pre>
+<p><code>--repo</code> needs a token from the git host, with write access, on the server's settings page.</p>
+<h2 id="docs"><a class="header" href="#docs">Docs</a></h2>
+<p>Each project has docs on the server: a README, notes, designs, pictures, edited in the browser
+(markdown with a live preview) or from here.</p>
+<pre><code class="language-sh">wing doc                           # the current project's files
+wing doc edit notes/design.md      # in $EDITOR; a new path makes a new file
+wing doc add ./diagram.png
+wing doc show notes/design.md
+wing doc rm notes                  # a folder, and what is in it
 </code></pre>
 <h2 id="tasks-and-plans"><a class="header" href="#tasks-and-plans">Tasks and plans</a></h2>
 <p>Every task and every plan belongs to one project, numbered within it. The project is the one the
@@ -322,6 +336,9 @@ wing plan close 1
 </code></pre>
 <p>In a task's text, <code>+PLAN</code> puts it in a plan (its number, or a one-word title), and <code>!high</code> or
 <code>!low</code> sets its priority.</p>
+<p>A task can follow an issue on the git host: <code>wing todo edit 4 --issue 12</code>. Marking it done closes
+the issue; reopening it opens the issue again. <code>wing todo import</code> makes a task of every open issue
+that no task follows yet.</p>
 <h2 id="templates"><a class="header" href="#templates">Templates</a></h2>
 <p>Templates are edited on the server, in its Templates tab: every file of every template, with new
 files, uploads, renames and the executable bit. <code>common/</code> is there too.</p>
@@ -362,7 +379,7 @@ default: deny                # anything not listed
 You review changes. ...
 </code></pre>
 <p>Rules are <code>read</code>, <code>grep</code>, <code>glob</code>, <code>edit</code>, <code>write</code>, <code>bash</code>, <code>bash(PATTERN)</code>, <code>web.search</code>,
-<code>web.fetch</code>, <code>task</code>, <code>mcp(SERVER)</code> and <code>mcp(SERVER/TOOL)</code>. Deny wins over ask, ask over allow.</p>
+<code>web.fetch</code> and <code>task</code>. Deny wins over ask, ask over allow.</p>
 <pre><code class="language-sh">wing agent pull [--notes]          # write every agent for each coding tool installed here
 wing agent list
 wing agent new NAME ROLE...
@@ -372,6 +389,19 @@ wing agent edit NAME
 Where a tool cannot express a rule, the agent gets the stricter reading, never the looser one,
 and <code>--notes</code> says what was left out. A file wing did not write is never touched; files of an
 agent deleted on the server are removed.</p>
+<h2 id="rules"><a class="header" href="#rules">Rules</a></h2>
+<p>Rules are the standing instructions agents read: one set for everywhere, and one per project,
+edited in the server's Rules tab (and each project's).</p>
+<pre><code class="language-sh">wing rules                         # the global rules
+wing rules edit                    # in $EDITOR; `wing rules edit PROJECT` for a project's
+wing rules push global ~/.claude/CLAUDE.md   # make a file of yours the rules
+wing rules pull                    # write them here (the hourly sync does it too)
+</code></pre>
+<p>The global rules go to each coding tool installed here, in the file that tool reads. A project's
+rules go into its checkout as <code>AGENTS.md</code>, and only when the project has rules written, or agents
+chosen in its settings; those agents are named in it, each with its role. Nothing else is ever
+written into a checkout. A file wing did not write, with other words in it, is left alone: push
+it first to make it the rules.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="machines"><a class="header" href="#machines">Machines</a></h1>
 <p>Machines store SSH targets and host interfaces, and drive a tight SSH
 integration: <code>connect</code>, <code>check --ssh</code>, and <code>sync</code> all reuse one <strong>ControlMaster
