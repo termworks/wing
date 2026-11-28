@@ -48,10 +48,24 @@ proc infoCommand*(section: DashboardSection; row: seq[string]): string =
     "machine info " & quoteShell(row[0])
   of "Templates":
     "template info " & quoteShell(row[0])
+  of "Tasks":
+    # [project, number, ...] -- a task is a number within its project.
+    if row.len < 2: "" else: "todo show " & row[1] & " --project " & quoteShell(row[0])
+  of "Skills":
+    "skill show " & quoteShell(row[0])
+  of "Agents":
+    "agent show " & quoteShell(row[0])
   of "Sync":
     "sync info " & quoteShell(row[0])
   else:
     ""
+
+proc taskCommand*(section: DashboardSection; row: seq[string];
+    action: string): string =
+  ## start, done or reopen the selected task.
+  if section.title != "Tasks" or row.len < 2:
+    return ""
+  action & " " & row[1] & " --project " & quoteShell(row[0])
 
 proc deleteCommand*(section: DashboardSection; row: seq[string]): string =
   if row.len == 0:
@@ -63,6 +77,12 @@ proc deleteCommand*(section: DashboardSection; row: seq[string]): string =
     "machine remove " & quoteShell(row[0])
   of "Templates":
     "template remove " & quoteShell(row[0])
+  of "Tasks":
+    if row.len < 2: "" else: "todo rm " & row[1] & " --project " & quoteShell(row[0])
+  of "Skills":
+    "skill delete " & quoteShell(row[0]) & " --yes"
+  of "Agents":
+    "agent delete " & quoteShell(row[0]) & " --yes"
   of "Sync":
     "sync remove " & quoteShell(row[0])
   else:

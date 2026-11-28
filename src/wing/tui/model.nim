@@ -4,17 +4,19 @@ import boba
 
 import ../types
 
+# The CLI's palette (ui.nim), so the dashboard and the commands read as one tool.
 let
-  cPrimary* = basicColor(1)
-  cOk* = basicColor(2)
-  cWarn* = basicColor(3)
-  cTag* = basicColor(6)
-  cMuted* = basicColor(8)
-  cText* = basicColor(15)
-  rowBg* = extendedColor(232)
+  cPrimary* = extendedColor(141)
+  cOk* = extendedColor(114)
+  cWarn* = extendedColor(179)
+  cBad* = extendedColor(203)
+  cTag* = extendedColor(117)
+  cMuted* = extendedColor(244)
+  cText* = extendedColor(252)
+  rowBg* = extendedColor(234)
   rowBgAlt* = extendedColor(235)
   rowBgSelected* = extendedColor(237)
-  panelBg* = extendedColor(233)
+  panelBg* = extendedColor(235)
 
 type
   ViewState* = object
@@ -59,6 +61,7 @@ type
     promptTemplatePath
     promptTemplateLanguage
     promptTemplateFramework
+    promptTaskAdd
 
   WingApp* = ref object of Model
     data*: DashboardData

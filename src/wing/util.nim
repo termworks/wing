@@ -2,8 +2,10 @@
 
 import std/[os, strutils, terminal, times]
 
+import ./ui
+
 proc die*(message: string; code = 1) =
-  stderr.writeLine(message)
+  stderr.writeLine(style("✗ ", Bad, stderr) & message)
   quit(code)
 
 proc nowStamp*(): string =
@@ -42,28 +44,31 @@ proc helpLine*(name, alias, description, code: string): string =
       paint(description, "37")
 
 proc table*(headers: seq[string]; rows: seq[seq[string]]): string =
+  ## Columns sized to what is in them (colour does not count), the header muted over a rule, and
+  ## the first column strong: it is what each row is.
   var widths = newSeq[int](headers.len)
   for i, header in headers:
     widths[i] = header.len
   for row in rows:
     for i, cell in row:
       if i < widths.len:
-        widths[i] = max(widths[i], cell.len)
+        widths[i] = max(widths[i], visibleLen(cell))
 
-  proc renderRow(row: seq[string]): string =
+  proc renderRow(row: seq[string]; head = false): string =
     var cells: seq[string] = @[]
     for i in 0 ..< widths.len:
       let cell = if i < row.len: row[i] else: ""
-      cells.add(cell & repeat(" ", widths[i] - cell.len))
-    " " & cells.join("  ") & " "
+      let shown = if head: mute(cell) elif i == 0: strong(cell) else: cell
+      cells.add(if i == widths.high: shown else: padRight(shown, widths[i]))
+    " " & cells.join("  ")
 
   proc renderRule(): string =
     var cells: seq[string] = @[]
     for width in widths:
-      cells.add(repeat("-", width))
-    " " & cells.join("  ") & " "
+      cells.add(repeat(if colorOn(): "─" else: "-", width))
+    " " & mute(cells.join("  "))
 
-  result.add(renderRow(headers))
+  result.add(renderRow(headers, head = true))
   result.add("\n")
   result.add(renderRule())
   for row in rows:

@@ -3,48 +3,45 @@
 import std/strutils
 
 import ./cliargs
+import ./ui
 import ./util
 
+proc command(name, alias, description: string): string =
+  let label = if alias.len > 0: name & " " & mute(alias) else: name
+  "  " & padRight(accent(label), 18) & description
+
 proc showHelp*() =
-  echo paint("wing", "1;35") & paint(" — development workflow dashboard", "2")
+  echo heading("wing", "projects, their tasks, and the machines they live on")
   echo ""
-  echo paint("Usage:", "1;36") & "  " & paint("wing", "1;32") & " " &
-      paint("<COMMAND>", "33")
+  let usage = "  $1  wing $2$3" % [mute("usage"), info("<command>"), mute(" [options]")]
+  echo usage & mute("     ·  wing alone opens the dashboard")
   echo ""
-  echo paint("Main commands:", "1;36")
-  echo helpLine("new", "", "A project from a template, registered everywhere", "1;32")
-  echo helpLine("todo", "td", "This project's tasks, on the wing server", "1;32")
-  echo helpLine("plan", "pl", "This project's plans, on the wing server", "1;32")
-  echo helpLine("skill", "sk", "Agent skills from the wing server, linked into every agent", "1;32")
-  echo helpLine("project", "p", "Project and code creation", "1;32")
-  echo helpLine("machine", "m", "Add or edit hostnames and ssh", "1;32")
-  echo helpLine("template", "t", "Project template management", "1;32")
-  echo helpLine("env", "e", "direnv-style .envrc loader", "1;32")
-  echo helpLine("sync", "s", "Sync a project to a remote machine over SSH", "1;32")
-  echo helpLine("ssh", "go", "Shell into a machine, or into a project wherever it is",
-      "1;32")
-  echo helpLine("status", "st", "What is uncommitted or unpushed, everywhere", "1;32")
+  echo strong("Main commands:")
+  echo command("new", "", "a project from a template, registered here and on the server")
+  echo command("todo", "td", "the current project's tasks: add, start, done, show, note")
+  echo command("plan", "pl", "the current project's plans, and how far along they are")
+  echo command("project", "p", "this machine's projects: add, clone, adopt, discover, info")
+  echo command("template", "t", "what projects are made from, edited on the server")
+  echo command("agent", "ag", "coding-agent profiles: role, skills, allowed and banned tools")
+  echo command("skill", "sk", "agent skills from the server, linked into every agent")
+  echo command("server", "", "log in, list the server's projects, import from git")
+  echo command("status", "st", "what is uncommitted or unpushed, everywhere")
   echo ""
-  echo paint("Other commands:", "1;36")
-  echo helpLine("server", "", "Log in to a wing server and register projects there", "1;34")
-  echo helpLine("init", "", "Initialize wing data and register templates",
-      "1;34")
-  echo helpLine("doctor", "", "Check the setup and say what to fix", "1;34")
-  echo helpLine("where", "", "Print a project's path, or the ssh to reach it", "1;34")
-  echo helpLine("data", "", "Backup, restore, export, and import wing data",
-      "1;34")
-  echo helpLine("completions", "", "Generate shell completions", "1;34")
-  echo helpLine("tui", "ui", "Full-screen terminal dashboard", "1;34")
+  echo strong("Machines:")
+  echo command("machine", "m", "hosts, addresses and ssh config")
+  echo command("ssh", "go", "a shell on a machine, or in a project wherever it is")
+  echo command("sync", "s", "a project copied to another machine over ssh")
+  echo command("where", "", "a project's path, or the ssh that reaches it")
+  echo command("env", "e", "direnv-style .envrc loading")
   echo ""
-  echo paint("Options:", "1;36")
-  echo "  " & paint("--about", "33") & repeat(" ", 13) & "About the tool"
-  echo "  " & paint("-h, --help", "33") & repeat(" ", 9) &
-      "Print help information"
-  echo "  " & paint("-V, --version", "33") & repeat(" ", 6) &
-      "Print version information"
+  echo strong("Other commands:")
+  echo command("tui", "ui", "the full-screen dashboard")
+  echo command("doctor", "", "check the setup, and say what to fix")
+  echo command("init", "", "set up wing's data and templates")
+  echo command("data", "", "backup, restore, export, import")
+  echo command("completions", "", "shell completions for bash, zsh, fish")
   echo ""
-  echo paint("Tip:", "1;35") & " run " & paint("wing", "1;32") &
-      " with no arguments to open the TUI."
+  echo mute("  -h, --help  help for any command  ·  -V, --version  ·  --about")
 
 proc commandReferenceMarkdown*(): string =
   """
@@ -56,6 +53,7 @@ proc commandReferenceMarkdown*(): string =
 - `wing todo ...` — the current project's tasks, kept on the wing server.
 - `wing plan ...` — the current project's plans, kept on the wing server.
 - `wing skill ...` — agent skills from the wing server, linked into Claude, Codex and ~/.agents.
+- `wing agent ...` — coding-agent profiles from the wing server, written for Claude Code, OpenCode, Gemini CLI and Codex.
 - `wing project ...` — manage projects, discovery, import, JSON listing.
 - `wing machine ...` — manage SSH hosts, SSH config, health checks.
 - `wing template ...` — manage and safely apply project templates.

@@ -81,3 +81,38 @@ Pulled skills live in `$XDG_DATA_HOME/wing/server/skills` and are linked into
 colon-separated, replaces that list). A link another tool made is taken over; a real folder of
 the same name is left alone and reported. When a skill is deleted on the server, the next pull
 removes it and its links.
+
+## Agents
+
+An agent is a profile for a coding agent: a folder with an `AGENT.md`, one schema for all of
+them, edited in the server's Agents tab.
+
+```yaml
+---
+name: reviewer
+description: Reviews a change for bugs and risky edits; never changes anything.
+model: opus                  # optional; empty means the tool's default
+skills: [doccleanup]
+tools:
+  allow: [read, grep, glob, bash(git diff *), web.search]
+  ask:   [write]
+  deny:  [edit, bash(rm *), bash(git push*)]
+default: deny                # anything not listed
+---
+You review changes. ...
+```
+
+Rules are `read`, `grep`, `glob`, `edit`, `write`, `bash`, `bash(PATTERN)`, `web.search`,
+`web.fetch`, `task`, `mcp(SERVER)` and `mcp(SERVER/TOOL)`. Deny wins over ask, ask over allow.
+
+```sh
+wing agent pull [--notes]          # write every agent for each coding tool installed here
+wing agent list
+wing agent new NAME ROLE...
+wing agent edit NAME
+```
+
+`pull` writes each agent in the format of every coding tool that is installed on the machine.
+Where a tool cannot express a rule, the agent gets the stricter reading, never the looser one,
+and `--notes` says what was left out. A file wing did not write is never touched; files of an
+agent deleted on the server are removed.

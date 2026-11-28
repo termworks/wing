@@ -47,7 +47,8 @@ proc handleNew*(argsIn: seq[string]) =
   if noGit: apply.add("--no-git")
   handleTemplate(apply)
 
-  var add = @["--namespace", namespace, "add", projectName, "--path", target, "--template", templateName]
+  var add = @["--namespace", namespace, "add", projectName, "--path", target,
+      "--template", templateName]
   let detected = detectProject(target)
   if detected.found and detected.project.language.len > 0:
     add.add(@["--language", detected.project.language])

@@ -18,6 +18,7 @@ import ./cmd/machine
 import ./cmd/new
 import ./cmd/project
 import ./cmd/server
+import ./cmd/agent
 import ./cmd/skill
 import ./cmd/sync
 import "./cmd/template"
@@ -52,6 +53,8 @@ proc main*() =
     handleTodo(args)
   of "plan", "pl", "plans":
     handlePlan(args)
+  of "agent", "ag", "agents":
+    handleAgent(args)
   of "skill", "sk", "skills":
     handleSkill(args)
   of "server", "login":

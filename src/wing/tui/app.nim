@@ -21,8 +21,13 @@ Options:
   --command COMMAND  Run a wing command through the TUI command runner
   -h, --help         Print help information
 
+Tabs: Projects, Tasks, Machines, Templates, Agents, Skills, Sync. Tasks, Agents and Skills come from the
+wing server (wing server login URL).
+
 Keys:
-  Left/Right, h/l, Tab, 1-4   Switch sections
+  Left/Right, h/l, Tab, 1-6   Switch tabs
+  s / x / o                   On Tasks: start, done, reopen the selected task
+  p                           On Agents and Skills: pull from the wing server
   Up/Down, j/k                Move selection
   PageUp/PageDown             Move faster
   /                           Filter current view
@@ -57,6 +62,27 @@ proc runAndOverlay*(m: WingApp; command, titlePrefix: string) =
   m.state.message = if res.code == 0: "ok: " & command else: "failed: " & command
   m.showOverlay(titlePrefix & " (" & $res.code & ")", res.output)
 
+proc runQuietly*(m: WingApp; command: string) =
+  ## A quick action: run it, reload, and say how it went on the status line, not in a dialog.
+  if command.len == 0:
+    return
+  let before = selectedRow(m.data, m.state)
+  let res = runCliCommand(command)
+  m.data = loadDashboardData()
+  # The list re-sorts (a started task moves up), so the cursor follows the item, not the row.
+  if before.len >= 2:
+    let rows = sectionRows(m.data, m.state)
+    for i, row in rows:
+      if row.len >= 2 and row[0] == before[0] and row[1] == before[1]:
+        m.state.cursor = i
+  var said = command
+  for line in res.output.strip().splitLines():
+    let text = line.strip()
+    if text.len > 0 and (said == command or text.startsWith("✓") or
+        text.startsWith("✗")):
+      said = text
+  m.state.message = (if res.code == 0: "ok: " else: "failed: ") & said
+
 proc startAddForm*(m: WingApp; section: DashboardSection) =
   m.formSectionTitle = section.title
   m.formName = ""
@@ -77,6 +103,17 @@ proc startAddForm*(m: WingApp; section: DashboardSection) =
     m.showPrompt(promptMachineName, section.title & " form · name", "")
   of "Templates":
     m.showPrompt(promptTemplateName, section.title & " form · name", "")
+  of "Tasks":
+    # One line, as the site's quick add: the selected task's project is offered first.
+    let row = selectedRow(m.data, m.state)
+    m.showPrompt(promptTaskAdd, "New task · @project text +plan !high",
+        if row.len > 0: "@" & row[0] & " " else: "@")
+  of "Skills":
+    m.showOverlay("Add a skill",
+        "Make one on the wing server's Skills tab, or:\n  wing skill new NAME DESCRIPTION\n  wing skill edit NAME\nthen p to pull it here.")
+  of "Agents":
+    m.showOverlay("Add an agent",
+        "Make one on the wing server's Agents tab (its form sets the role, model, skills\nand tool rules), or:\n  wing agent new NAME ROLE\n  wing agent edit NAME\nthen p to write it for every coding tool here.")
   of "Sync":
     m.showOverlay("Add sync target",
         "Use the CLI — sync targets need several fields:\n  wing sync add NAME --project P --machine M --remote PATH")
@@ -172,6 +209,15 @@ proc acceptPrompt*(m: WingApp; value: string) =
     m.formFramework = v
     m.finishForm(templateFormCommand(m.formName, m.formDescription, m.formPath,
         m.formLanguage, m.formFramework))
+  of promptTaskAdd:
+    let words = v.splitWhitespace()
+    if words.len < 2 or not words[0].startsWith("@") or words[0].len < 2:
+      m.state.message = "failed: start with @project, then the task"
+      m.mode = modeDashboard
+    else:
+      let project = quoteShell(words[0][1 .. ^1])
+      let text = quoteShell(words[1 .. ^1].join(" "))
+      m.runAndOverlay("todo add --project $1 $2" % [project, text], "New task")
   of promptNone:
     m.mode = modeDashboard
 
@@ -286,12 +332,24 @@ method update(m: WingApp; msg: Msg): (Model, Cmd) =
         if command.len > 0:
           let res = runCliCommand(command)
           m.showOverlay("Details (" & $res.code & ")", res.output)
+      elif key.matchString("x", "X", "o", "O") and currentSection(m.data,
+          m.state).title == "Tasks":
+        let action = if key.matchString("x",
+            "X"): "todo done" else: "todo reopen"
+        m.runQuietly(taskCommand(currentSection(m.data, m.state), selectedRow(
+            m.data, m.state), action))
+      elif key.matchString("p", "P") and currentSection(m.data,
+          m.state).title in ["Skills", "Agents"]:
+        let title = currentSection(m.data, m.state).title
+        m.runQuietly(if title == "Skills": "skill pull" else: "agent pull")
       elif key.matchString("s", "S"):
         # The TUI cannot hand its terminal to ssh, so this shows the command instead of pretending
         # to run it -- copyable, and honest about which machine it would reach.
         let section = currentSection(m.data, m.state)
         let row = selectedRow(m.data, m.state)
-        if row.len >= 2 and section.title == "Projects":
+        if section.title == "Tasks":
+          m.runQuietly(taskCommand(section, row, "todo start"))
+        elif row.len >= 2 and section.title == "Projects":
           let res = runCliCommand("where " & quoteShell(row[0] & ":" & row[1]))
           m.showOverlay("Where " & row[1] & " is", res.output)
         elif row.len >= 1 and section.title == "Machines":
