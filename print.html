@@ -345,6 +345,33 @@ wing skill push NAME DIR
 colon-separated, replaces that list). A link another tool made is taken over; a real folder of
 the same name is left alone and reported. When a skill is deleted on the server, the next pull
 removes it and its links.</p>
+<h2 id="agents"><a class="header" href="#agents">Agents</a></h2>
+<p>An agent is a profile for a coding agent: a folder with an <code>AGENT.md</code>, one schema for all of
+them, edited in the server's Agents tab.</p>
+<pre><code class="language-yaml">---
+name: reviewer
+description: Reviews a change for bugs and risky edits; never changes anything.
+model: opus                  # optional; empty means the tool's default
+skills: [doccleanup]
+tools:
+  allow: [read, grep, glob, bash(git diff *), web.search]
+  ask:   [write]
+  deny:  [edit, bash(rm *), bash(git push*)]
+default: deny                # anything not listed
+---
+You review changes. ...
+</code></pre>
+<p>Rules are <code>read</code>, <code>grep</code>, <code>glob</code>, <code>edit</code>, <code>write</code>, <code>bash</code>, <code>bash(PATTERN)</code>, <code>web.search</code>,
+<code>web.fetch</code>, <code>task</code>, <code>mcp(SERVER)</code> and <code>mcp(SERVER/TOOL)</code>. Deny wins over ask, ask over allow.</p>
+<pre><code class="language-sh">wing agent pull [--notes]          # write every agent for each coding tool installed here
+wing agent list
+wing agent new NAME ROLE...
+wing agent edit NAME
+</code></pre>
+<p><code>pull</code> writes each agent in the format of every coding tool that is installed on the machine.
+Where a tool cannot express a rule, the agent gets the stricter reading, never the looser one,
+and <code>--notes</code> says what was left out. A file wing did not write is never touched; files of an
+agent deleted on the server are removed.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="machines"><a class="header" href="#machines">Machines</a></h1>
 <p>Machines store SSH targets and host interfaces, and drive a tight SSH
 integration: <code>connect</code>, <code>check --ssh</code>, and <code>sync</code> all reuse one <strong>ControlMaster
