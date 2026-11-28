@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.9.0] - 2026-11-28
+
+### <!-- 0 -->⛰️  Features
+
+- Agent profiles from the wing server
+- One palette, server parity, tui tasks and skills
+
+### <!-- 1 -->🐛 Bug Fixes
+
+- Show the token prompt, hide what is typed
+
+### <!-- 5 -->🎨 Styling
+
+- Nimpretty the server commands
+
 ## [0.8.0] - 2026-11-27
 
 ### <!-- 0 -->⛰️  Features
